@@ -118,6 +118,7 @@ VIDEO_EXTENSIONS: Final = frozenset(
     {".3g2", ".3gp", ".avi", ".flv", ".m2ts", ".m4v", ".mkv", ".mov", ".mp4"}
     | {".mpeg", ".mpg", ".mts", ".ts", ".webm", ".wmv"},
 )
+MEDIA_EXTENSIONS: Final = IMAGE_EXTENSIONS | RAW_EXTENSIONS | VIDEO_EXTENSIONS
 # Sidecars carry metadata or edits of a sibling photo: never touched (see .todos/).
 SIDECAR_EXTENSIONS: Final = frozenset({".aae", ".thm", ".xmp"})
 # System folders that never hold user media (Windows, Synology, desktop trash bins).

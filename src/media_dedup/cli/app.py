@@ -15,10 +15,34 @@ from media_dedup.cli.root import root_callback
 from media_dedup.constants import APP_NAME
 from media_dedup.i18n import _
 
-_EXAMPLE = (
-    'docker run --rm -it -v "C:\\Family Photos:/data/c/Family Photos:ro" '
-    '-v "%USERPROFILE%\\media-dedup\\reports:/reports" media-dedup audit'
+# One short command per line, so a copy/paste stays a single command.
+# "\b" tells Click not to re-wrap the block.
+_WINDOWS_FOLDER = (
+    'docker run --rm -it -v "C:\\Photos:/data/c/Photos:ro" media-dedup audit'
 )
+_CURRENT_FOLDER = 'docker run --rm -it -v "${PWD}:/data/current:ro" media-dedup audit'
+
+
+def _epilog() -> str:
+    """Translated examples block shown at the end of `--help`, each one labelled.
+
+    Returns:
+        The epilog text.
+    """
+    return "\n\n".join(
+        (
+            "\n".join(
+                (
+                    "\b",
+                    _("A Windows folder (PowerShell):"),
+                    f"  {_WINDOWS_FOLDER}",
+                    _("The current folder (PowerShell, or bash on WSL, Linux, macOS):"),
+                    f"  {_CURRENT_FOLDER}",
+                ),
+            ),
+            _("Full commands (reports, journal, WSL): see README.md."),
+        ),
+    )
 
 
 def build_app() -> typer.Typer:
@@ -33,7 +57,7 @@ def build_app() -> typer.Typer:
             "Find and safely clean duplicate photos and videos across folders and "
             "disks. Start with 'audit' (read-only), then 'clean'."
         ),
-        epilog=_("Example: {example}").format(example=_EXAMPLE),
+        epilog=_epilog(),
         rich_markup_mode="rich",
         no_args_is_help=True,
         add_completion=False,

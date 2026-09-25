@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import shutil
+import time
 from typing import TYPE_CHECKING
 
 from media_dedup.constants import FFPROBE_BINARY
@@ -16,6 +17,7 @@ from media_dedup.plan.planner import build_plan
 from media_dedup.scan.broken import BrokenFileFinder
 from media_dedup.scan.deps import IntegrityTools, ScanDeps
 from media_dedup.scan.exact import ExactDuplicateFinder
+from media_dedup.scan.progress import Step
 from media_dedup.scan.walker import walk
 from media_dedup.services.policy import keep_policy, scan_filters, unmounted_folders
 
@@ -49,19 +51,14 @@ class AuditService:
         Raises:
             MountError: Nothing is mounted under the data directory.
         """
-        runtime = self._runtime
+        runtime, started = self._runtime, time.monotonic()
         data_dir = runtime.locations.data_dir
         if not data_dir.is_dir() or not any(data_dir.iterdir()):
             raise MountError(
                 _("No folder to analyse under {path}.").format(path=data_dir),
                 _('Mount your folders, e.g. -v "C:\\Photos:/data/c/Photos:ro".'),
             )
-        for folder in unmounted_folders(runtime.settings.folders, runtime.mapper):
-            runtime.output.warning(
-                _("Configured folder {path} is not mounted: it is ignored.").format(
-                    path=folder
-                ),
-            )
+        _warn_about_scope(runtime)
         roots = runtime.mounts.data_roots(data_dir)
         files = self._list_files(roots)
         ffprobe = shutil.which(FFPROBE_BINARY)
@@ -86,6 +83,7 @@ class AuditService:
             files_scanned=len(files),
             roots=roots,
             plan=build_plan(groups, broken, policy),
+            seconds=time.monotonic() - started,
         )
 
     def _list_files(self, roots: tuple[Path, ...]) -> list[MediaFile]:
@@ -97,9 +95,40 @@ class AuditService:
         Returns:
             The media files, by path.
         """
-        filters = scan_filters(self._runtime.settings.folders, self._runtime.mapper)
-        unique = {file.path: file for root in roots for file in walk(root, filters)}
+        filters = scan_filters(self._runtime.settings, self._runtime.mapper)
+        step = Step(
+            _("Listing media files"),
+            _(
+                "Walks through every folder; photos and videos are recognised by their "
+                "extension."
+            ),
+        )
+        self._progress.start(step, None)
+        found = asyncio.run(walk(roots, filters, self._progress))
+        self._progress.stop()
+        unique = {file.path: file for file in found}
         return [unique[path] for path in sorted(unique)]
+
+
+def _warn_about_scope(runtime: Runtime) -> None:
+    """Warn when part of the data is left out: unmounted folders, extension filter.
+
+    Args:
+        runtime: Settings, mount points and output.
+    """
+    for folder in unmounted_folders(runtime.settings.folders, runtime.mapper):
+        runtime.output.warning(
+            _("Configured folder {path} is not mounted: it is ignored.").format(
+                path=folder
+            ),
+        )
+    extensions = runtime.settings.scan.extensions
+    if extensions:
+        runtime.output.warning(
+            _("Only these extensions are analysed: {extensions}.").format(
+                extensions=", ".join(extensions)
+            ),
+        )
 
 
 async def _analyse(

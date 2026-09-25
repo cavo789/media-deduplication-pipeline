@@ -1,10 +1,10 @@
-"""The Jinja environment of the reports: autoescaped, translated, with size filters."""
+"""The Jinja environment of the reports: autoescaped, translated, formatting filters."""
 
 from __future__ import annotations
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from media_dedup.console.formatting import human_size
+from media_dedup.console.formatting import human_number, human_size
 from media_dedup.i18n import active
 
 _TEMPLATES_PACKAGE = "media_dedup.report"
@@ -30,4 +30,5 @@ def make_environment() -> Environment:
         newstyle=True,
     )
     environment.filters["size"] = human_size
+    environment.filters["number"] = human_number
     return environment

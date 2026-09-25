@@ -10,6 +10,7 @@ from media_dedup.cli.context import runtime_of, user_errors
 from media_dedup.console.progress import RichProgress
 from media_dedup.console.tables import outcome_table
 from media_dedup.i18n import _
+from media_dedup.scan.progress import NullProgress
 from media_dedup.services.clean import CleanService
 from media_dedup.services.undo import resolve_run_id, undo_run
 
@@ -33,9 +34,10 @@ def undo_command(
     output = runtime.output
     with user_errors(output):
         run = resolve_run_id(runtime, run_id)
-        CleanService(runtime, RichProgress(output.console)).ensure_ready()
+        CleanService(runtime, NullProgress()).ensure_ready()
         output.title(_("Undo {run_id}").format(run_id=run))
-        outcome = undo_run(runtime, run, RichProgress(output.console))
+        with RichProgress(output.console) as progress:
+            outcome = undo_run(runtime, run, progress)
     output.show(outcome_table(outcome, _("Undo {run_id}").format(run_id=run)))
     for incident in outcome.skipped:
         output.warning(f"{runtime.mapper.to_host(incident.path)}: {incident.reason}")

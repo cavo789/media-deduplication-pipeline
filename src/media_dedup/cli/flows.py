@@ -5,9 +5,9 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
-from media_dedup.console.formatting import human_size
+from media_dedup.console.formatting import human_number, human_size
 from media_dedup.console.progress import RichProgress
-from media_dedup.console.tables import findings_table, pairs_table
+from media_dedup.console.tables import findings_table, folder_pairs_view
 from media_dedup.errors import MediaDedupError
 from media_dedup.i18n import _
 from media_dedup.services.audit import AuditService
@@ -30,11 +30,14 @@ def audit_and_show(runtime: Runtime) -> AuditFindings:
     """
     output = runtime.output
     output.title(_("Audit"))
-    findings = AuditService(runtime, RichProgress(output.console)).run()
+    with RichProgress(output.console) as progress:
+        findings = AuditService(runtime, progress).run()
     output.show(findings_table(findings))
-    pairs = pairs_table(findings, runtime.mapper)
+    output.blank()
+    pairs = folder_pairs_view(findings, runtime.mapper)
     if pairs is not None:
         output.show(pairs)
+        output.blank()
     return findings
 
 
@@ -82,8 +85,8 @@ def confirm_clean(runtime: Runtime, plan: CleanPlan, yes: bool) -> bool:  # noqa
     )
     return runtime.output.confirm(
         question.format(
-            count=plan.removable_count,
+            count=human_number(plan.removable_count),
             size=human_size(plan.reclaimable),
-            broken=len(plan.broken),
+            broken=human_number(len(plan.broken)),
         ),
     )

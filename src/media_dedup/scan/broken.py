@@ -9,6 +9,7 @@ from media_dedup.constants import BrokenReason, MediaKind
 from media_dedup.i18n import _
 from media_dedup.scan.image_check import image_problem
 from media_dedup.scan.models import BrokenFile
+from media_dedup.scan.progress import Step
 from media_dedup.scan.video_check import video_problem
 
 if TYPE_CHECKING:
@@ -62,7 +63,14 @@ class BrokenFileFinder:
                 broken.extend(_as_broken(file, facts))
             else:
                 to_check.append(file)
-        self._deps.progress.start(_("Checking that files can be read"), len(to_check))
+        step = Step(
+            _("Checking that files can be read"),
+            _(
+                "Finds broken files: empty (0 bytes), images that cannot be decoded, "
+                "videos that cannot be opened."
+            ),
+        )
+        self._deps.progress.start(step, len(to_check))
         async with asyncio.TaskGroup() as group:
             tasks = {file: group.create_task(self._check(file)) for file in to_check}
         self._deps.progress.stop()

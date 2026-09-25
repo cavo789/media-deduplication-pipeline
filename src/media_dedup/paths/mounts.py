@@ -9,12 +9,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from media_dedup.constants import MOUNTINFO_PATH
+from media_dedup.paths.host_sources import windows_source
 
 if TYPE_CHECKING:
     from media_dedup.paths.locations import Locations
     from media_dedup.paths.mount_kind import MountKind
 
+_ROOT_FIELD = 3
 _MOUNT_POINT_FIELD = 4
+_SEPARATOR = "-"
+_TAIL_FIELDS = 2
 _OCTAL_ESCAPE = re.compile(r"\\([0-7]{3})")
 
 
@@ -30,25 +34,41 @@ def _unescape(field: str) -> str:
     return _OCTAL_ESCAPE.sub(lambda match: chr(int(match.group(1), 8)), field)
 
 
-def read_mount_points(mountinfo: Path = Path(MOUNTINFO_PATH)) -> frozenset[Path]:
-    """Read every mount point of the current mount namespace.
+def read_mounts(mountinfo: Path = Path(MOUNTINFO_PATH)) -> tuple[Mount, ...]:
+    """Read every mount of the current mount namespace.
 
     Args:
         mountinfo: The kernel mount table (overridable for tests).
 
     Returns:
-        The mount points; empty when the table is unavailable (not Linux).
+        The mounts; empty when the table is unavailable (not Linux).
     """
     try:
         lines = mountinfo.read_text(encoding="utf-8").splitlines()
     except OSError:
-        return frozenset()
-    fields = (line.split(" ") for line in lines)
-    return frozenset(
-        Path(_unescape(parts[_MOUNT_POINT_FIELD]))
-        for parts in fields
-        if len(parts) > _MOUNT_POINT_FIELD
+        return ()
+    return tuple(
+        mount for mount in (_parse(line.split(" ")) for line in lines) if mount
     )
+
+
+def _parse(fields: list[str]) -> Mount | None:
+    """Decode one mountinfo line.
+
+    Args:
+        fields: The line, split on spaces.
+
+    Returns:
+        The mount, or None for a malformed line.
+    """
+    if len(fields) <= _MOUNT_POINT_FIELD:
+        return None
+    point = Path(_unescape(fields[_MOUNT_POINT_FIELD]))
+    tail = fields[fields.index(_SEPARATOR) + 1 :] if _SEPARATOR in fields else []
+    if len(tail) < _TAIL_FIELDS:
+        return Mount(point, None)
+    root = _unescape(fields[_ROOT_FIELD])
+    return Mount(point, windows_source(root, tail[0], _unescape(tail[1])))
 
 
 def is_read_only(path: Path) -> bool:
@@ -64,19 +84,39 @@ def is_read_only(path: Path) -> bool:
 
 
 @dataclass(frozen=True, slots=True)
+class Mount:
+    r"""One mount point, and the Windows folder it comes from when known."""
+
+    point: Path
+    windows_source: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class MountTable:
     """A snapshot of the mount points, queried against the tool's locations."""
 
     mount_points: frozenset[Path]
+    host_sources: tuple[tuple[Path, str], ...] = ()
 
     @classmethod
-    def current(cls) -> MountTable:
+    def current(cls, mountinfo: Path = Path(MOUNTINFO_PATH)) -> MountTable:
         """Snapshot the mount table of this process.
+
+        Args:
+            mountinfo: The kernel mount table (overridable for tests).
 
         Returns:
             The current mount table.
         """
-        return cls(read_mount_points())
+        mounts = read_mounts(mountinfo)
+        return cls(
+            frozenset(mount.point for mount in mounts),
+            tuple(
+                (mount.point, mount.windows_source)
+                for mount in mounts
+                if mount.windows_source is not None
+            ),
+        )
 
     def is_persistent(self, locations: Locations, kind: MountKind) -> bool:
         """Tell whether data written to `kind` survives the container.

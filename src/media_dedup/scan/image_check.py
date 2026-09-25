@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import signal
 import struct
+import threading
 import warnings
 from typing import TYPE_CHECKING, Final
 
@@ -30,11 +32,15 @@ _DECODE_ERRORS: Final = (
 
 
 def prepare_image_worker() -> None:
-    """Configure Pillow in a worker: HEIC support, no pixel limit.
+    """Configure a worker: ignore Ctrl+C, HEIC support, no pixel limit.
 
-    Huge panoramas are legitimate photos, not decompression bombs to refuse: without
-    lifting the limit they would be reported as broken.
+    Ctrl+C reaches every process of the terminal; the parent alone handles it, so
+    workers never print a `KeyboardInterrupt` traceback. Huge panoramas are
+    legitimate photos, not decompression bombs to refuse: without lifting the limit
+    they would be reported as broken.
     """
+    if threading.current_thread() is threading.main_thread():  # a worker process
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
     pillow_heif.register_heif_opener()
     Image.MAX_IMAGE_PIXELS = None
 

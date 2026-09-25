@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import hashlib
-from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from media_dedup.constants import THUMBNAILS_DIR_NAME, MediaKind, Sizes
+from media_dedup.plan.pairs import folder_pairs
 from media_dedup.report.summary import ReportSummary
 from media_dedup.report.thumbnails import ThumbnailJob
 from media_dedup.report.views import (
@@ -161,19 +161,12 @@ class ReportBuilder:
         )
 
     def _pairs(self, decisions: Iterable[KeepDecision]) -> tuple[FolderPairView, ...]:
-        counts: Counter[tuple[Path, Path]] = Counter()
-        sizes: Counter[tuple[Path, Path]] = Counter()
-        for decision in decisions:
-            for file in decision.removable:
-                pair = (decision.keeper.path.parent, file.path.parent)
-                counts[pair] += 1
-                sizes[pair] += decision.size
         host = self.mapper.to_host
         return tuple(
-            FolderPairView(host(kept), host(removed), count, sizes[kept, removed])
-            for (kept, removed), count in sorted(
-                counts.items(), key=lambda item: -sizes[item[0]]
+            FolderPairView(
+                host(pair.kept_in), host(pair.removed_from), pair.files, pair.size
             )
+            for pair in folder_pairs(decisions)
         )
 
     def _incidents(self, incidents: Iterable[Incident]) -> tuple[IncidentView, ...]:

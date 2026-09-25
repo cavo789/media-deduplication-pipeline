@@ -1,7 +1,9 @@
 r"""Translate container paths to the host paths the user knows, and back.
 
-Convention: `X:\some\folder` is mounted on `/data/x/some/folder`, and any other host
-path `/p/q` on `/data/p/q`. That makes the translation lossless in both directions.
+Folders whose Windows source is known from the mount table (Docker Desktop) map to
+that source, whatever their mount point. Otherwise the convention applies:
+`X:\some\folder` is mounted on `/data/x/some/folder`, and any other host path `/p/q`
+on `/data/p/q`.
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ class HostPathMapper:
     r"""Maps between the container view (`/data/...`) and the host view (`C:\...`)."""
 
     data_dir: Path
+    sources: tuple[tuple[Path, str], ...] = ()
 
     def to_host(self, path: Path) -> str:
         r"""Render a container path the way the user sees it on the host.
@@ -27,8 +30,16 @@ class HostPathMapper:
             path: A path inside the container.
 
         Returns:
-            `C:\\...` for a drive-letter mount, `/...` otherwise.
+            The known Windows source, else `C:\\...` for a drive-letter mount, else
+            `/...`.
         """
+        known = [
+            (point, host) for point, host in self.sources if path.is_relative_to(point)
+        ]
+        if known:
+            point, host = max(known, key=lambda source: len(source[0].parts))
+            rest = path.relative_to(point).parts
+            return "\\".join((host.rstrip("\\"), *rest)) if rest else host
         if not path.is_relative_to(self.data_dir):
             return str(path)
         parts = path.relative_to(self.data_dir).parts
@@ -58,16 +69,35 @@ class HostPathMapper:
         Returns:
             The matching path under the data directory.
         """
-        windows = _WINDOWS_PATH.match(host_path)
+        windows = _windows_parts(host_path)
         if windows is not None:
-            rest = [part for part in _SEPARATORS.split(windows["rest"]) if part]
-            return self.data_dir.joinpath(windows["drive"].lower(), *rest)
+            for point, host in sorted(self.sources, key=lambda item: -len(item[1])):
+                prefix = _windows_parts(host) or ()
+                if is_within(Path(*windows), Path(*prefix)):
+                    return point.joinpath(*windows[len(prefix) :])
+            return self.data_dir.joinpath(*windows)
         path = Path(host_path)
         if path.is_relative_to(self.data_dir):
             return path
         return self.data_dir.joinpath(
             *path.parts[1:] if path.is_absolute() else path.parts
         )
+
+
+def _windows_parts(path: str) -> tuple[str, ...] | None:
+    r"""Split a Windows path into its lowercase drive letter and its folders.
+
+    Args:
+        path: A path such as `C:\\Photos\\2013` or `d:/backup`.
+
+    Returns:
+        `("c", "Photos", "2013")`, or None when `path` has no drive letter.
+    """
+    windows = _WINDOWS_PATH.match(path)
+    if windows is None:
+        return None
+    rest = [part for part in _SEPARATORS.split(windows["rest"]) if part]
+    return (windows["drive"].lower(), *rest)
 
 
 def is_within(path: Path, folder: Path) -> bool:

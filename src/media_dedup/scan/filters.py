@@ -41,9 +41,21 @@ def media_kind(path: Path) -> MediaKind | None:
 
 @dataclass(frozen=True, slots=True)
 class ScanFilters:
-    """Folders the walk must not enter."""
+    """Folders the walk must not enter, and the extensions it keeps (all when empty)."""
 
     excluded: tuple[Path, ...] = ()
+    extensions: frozenset[str] = frozenset()
+
+    def accepts(self, path: Path) -> bool:
+        """Tell whether a file has one of the extensions asked for.
+
+        Args:
+            path: A file.
+
+        Returns:
+            True when no extension filter is set, or when its extension is listed.
+        """
+        return not self.extensions or path.suffix.casefold() in self.extensions
 
     def skips_dir(self, path: Path) -> bool:
         """Tell whether a directory must be skipped.

@@ -28,6 +28,11 @@ excluded = []
 # protected = ['C:\Family Photos\Albums']
 # excluded = ['D:\backup']
 
+[scan]
+# Only analyse these extensions, e.g. ["png", "webp"]. Empty: every supported
+# one (`media-dedup audit --help` lists them).                    CLI: --ext
+extensions = []
+
 [clean]
 # Ask for confirmation before cleaning.                            CLI: --yes
 confirm = true

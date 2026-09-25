@@ -12,6 +12,7 @@ from media_dedup.i18n import _
 from media_dedup.index.facts import FileFacts
 from media_dedup.scan.hashing import full_digest, partial_digest
 from media_dedup.scan.models import DuplicateGroup, MediaFile
+from media_dedup.scan.progress import Step
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Hashable, Iterable, Sequence
@@ -26,7 +27,7 @@ _LOGGER = logging.getLogger(__name__)
 class _DigestStep:
     """One hashing pass: how to compute, read from and write to the cached facts."""
 
-    label: str
+    step: Step
     compute: Callable[[Path], str]
     cached: Callable[[FileFacts], str | None]
     store: Callable[[FileFacts, str], FileFacts]
@@ -77,7 +78,13 @@ class ExactDuplicateFinder:
         partial = await self._digests(
             by_size,
             _DigestStep(
-                _("Comparing files of equal size"),
+                Step(
+                    _("Comparing files of equal size"),
+                    _(
+                        "Only files of the same size can be identical: their first and "
+                        "last 64 KB rule most of them out quickly."
+                    ),
+                ),
                 partial_digest,
                 lambda facts: facts.partial_digest,
                 FileFacts.with_partial,
@@ -87,7 +94,13 @@ class ExactDuplicateFinder:
         full = await self._digests(
             [file for bucket in same_partial for file in bucket],
             _DigestStep(
-                _("Proving identity (full SHA-256)"),
+                Step(
+                    _("Proving identity (full SHA-256)"),
+                    _(
+                        "Reads the remaining candidates in full: same SHA-256 means "
+                        "identical, byte for byte."
+                    ),
+                ),
                 full_digest,
                 lambda facts: facts.full_digest,
                 FileFacts.with_full,
@@ -126,7 +139,7 @@ class ExactDuplicateFinder:
                 missing.append(file)
             else:
                 digests[file] = cached
-        self._deps.progress.start(step.label, len(missing))
+        self._deps.progress.start(step.step, len(missing))
         async with asyncio.TaskGroup() as group:
             tasks = {
                 file: group.create_task(self._hash(file, step)) for file in missing

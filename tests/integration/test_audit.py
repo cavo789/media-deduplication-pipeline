@@ -8,7 +8,7 @@ import pytest
 
 from media_dedup.constants import BrokenReason
 from media_dedup.errors import MountError
-from media_dedup.scan.progress import NullProgress
+from media_dedup.scan.progress import NullProgress, Step
 from media_dedup.services.audit import AuditService
 from tests.support.demo import build_demo
 from tests.support.media import FFMPEG
@@ -113,3 +113,33 @@ def test_nothing_mounted_is_an_error(locations: Locations) -> None:
     with pytest.raises(MountError) as caught:
         audit(locations)
     assert caught.value.tip is not None
+
+
+class RecordingProgress:
+    """A progress sink that remembers every step and how far it went."""
+
+    def __init__(self) -> None:
+        """Start with no step."""
+        self.steps: list[tuple[str, int | None]] = []
+        self.advances: list[int] = []
+
+    def start(self, step: Step, total: int | None) -> None:
+        """Record a step."""
+        self.steps.append((step.title, total))
+        self.advances.append(0)
+
+    def advance(self) -> None:
+        """Count one unit of the current step."""
+        self.advances[-1] += 1
+
+    def stop(self) -> None:
+        """Nothing to record."""
+
+
+def test_listing_reports_a_running_count(locations: Locations) -> None:
+    """Listing files is a step of unknown size that counts every media file found."""
+    build_demo(locations.data_dir)
+    progress = RecordingProgress()
+    findings = AuditService(make_runtime(locations), progress).run()
+    assert progress.steps[0] == ("Listing media files", None)
+    assert progress.advances[0] == findings.files_scanned

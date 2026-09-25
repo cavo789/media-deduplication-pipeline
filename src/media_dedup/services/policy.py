@@ -1,4 +1,4 @@
-"""Turn the `[folders]` settings into container paths."""
+"""Turn the `[folders]` and `[scan]` settings into policies and filters."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from media_dedup.plan.keeper import KeepPolicy
 from media_dedup.scan.filters import ScanFilters
 
 if TYPE_CHECKING:
-    from media_dedup.config.settings import FolderSettings
+    from media_dedup.config.settings import FolderSettings, Settings
     from media_dedup.paths.host_paths import HostPathMapper
 
 
@@ -28,18 +28,19 @@ def keep_policy(folders: FolderSettings, mapper: HostPathMapper) -> KeepPolicy:
     )
 
 
-def scan_filters(folders: FolderSettings, mapper: HostPathMapper) -> ScanFilters:
-    """Build the scan filters from the excluded host paths.
+def scan_filters(settings: Settings, mapper: HostPathMapper) -> ScanFilters:
+    """Build the scan filters from the excluded host paths and the extensions.
 
     Args:
-        folders: The `[folders]` settings.
+        settings: The effective settings.
         mapper: Host/container path translator.
 
     Returns:
         The filters, in container paths.
     """
     return ScanFilters(
-        excluded=tuple(mapper.to_container(path) for path in folders.excluded)
+        excluded=tuple(mapper.to_container(p) for p in settings.folders.excluded),
+        extensions=frozenset(settings.scan.extensions),
     )
 
 

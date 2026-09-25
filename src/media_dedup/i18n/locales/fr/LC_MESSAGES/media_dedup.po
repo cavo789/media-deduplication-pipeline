@@ -20,6 +20,9 @@ msgstr "'media-dedup undo <run>' restaure les fichiers d'une exécution."
 msgid "'undo' can no longer restore these broken files."
 msgstr "'undo' ne pourra plus restaurer ces fichiers cassés."
 
+msgid "A Windows folder (PowerShell):"
+msgstr "Un dossier Windows (PowerShell) :"
+
 #, python-brace-format
 msgid "A commented configuration file was created: {path}."
 msgstr "Un fichier de configuration commenté a été créé : {path}."
@@ -72,11 +75,17 @@ msgstr ""
 "Audite, demande confirmation, puis supprime réellement les copies en "
 "double (journalisé, annulable)."
 
+msgid "B"
+msgstr "o"
+
 msgid "Broken"
 msgstr "Cassés"
 
 msgid "Broken files"
 msgstr "Fichiers cassés"
+
+msgid "Broken files (empty or unreadable)"
+msgstr "Fichiers cassés (vides ou illisibles)"
 
 #, python-brace-format
 msgid "Broken files are in /quarantine/{run_id}; 'purge' deletes them."
@@ -125,9 +134,6 @@ msgstr "Comparaison des fichiers de même taille"
 msgid "Configured folder {path} is not mounted: it is ignored."
 msgstr "Le dossier configuré {path} n'est pas monté : il est ignoré."
 
-msgid "Copies that can be deleted"
-msgstr "Copies supprimables"
-
 msgid "Date"
 msgstr "Date"
 
@@ -159,6 +165,16 @@ msgstr "Groupes de doublons"
 msgid "Duplicates"
 msgstr "Doublons"
 
+msgid "Duration"
+msgstr "Durée"
+
+msgid ""
+"Each copy is compared again with the kept one before deletion; unreadable"
+" files go to the quarantine."
+msgstr ""
+"Chaque copie est recomparée à celle gardée avant d'être supprimée ; les "
+"fichiers illisibles vont en quarantaine."
+
 #, python-brace-format
 msgid "Edit {path} to change these settings; command-line options win."
 msgstr ""
@@ -185,9 +201,8 @@ msgstr ""
 "Chaque audit et nettoyage, du plus récent au plus ancien. Ouvrez cette "
 "page d'un double-clic : aucun serveur nécessaire."
 
-#, python-brace-format
-msgid "Example: {example}"
-msgstr "Exemple : {example}"
+msgid "Extra copies that can be deleted"
+msgstr "Copies en trop, supprimables"
 
 msgid "Failed"
 msgstr "En échec"
@@ -217,6 +232,13 @@ msgstr ""
 "Trouve les doublons exacts et les fichiers cassés. Lecture seule : montez"
 " les dossiers avec :ro."
 
+msgid ""
+"Finds broken files: empty (0 bytes), images that cannot be decoded, "
+"videos that cannot be opened."
+msgstr ""
+"Repère les fichiers cassés : vides (0 octet), images impossibles à "
+"décoder, vidéos impossibles à ouvrir."
+
 msgid "Folder"
 msgstr "Dossier"
 
@@ -227,6 +249,9 @@ msgid "Folder never modified; its files are the copies kept. Repeatable."
 msgstr ""
 "Dossier jamais modifié ; ses fichiers sont les copies conservées. "
 "Répétable."
+
+msgid "Folder on your computer"
+msgstr "Dossier sur votre ordinateur"
 
 msgid "Folder pairs"
 msgstr "Paires de dossiers"
@@ -248,6 +273,12 @@ msgstr "Dossiers partageant des fichiers identiques"
 msgid "Freed"
 msgstr "Libéré"
 
+msgid "Full commands (reports, journal, WSL): see README.md."
+msgstr "Commandes complètes (rapports, journal, WSL) : voir README_FR.md."
+
+msgid "GB"
+msgstr "Go"
+
 #, python-brace-format
 msgid "HTML report: {path}"
 msgstr "Rapport HTML : {path}"
@@ -265,6 +296,9 @@ msgstr "Langue de l'interface."
 msgid "Invalid configuration ({details})."
 msgstr "Configuration invalide ({details})."
 
+msgid "KB"
+msgstr "Ko"
+
 msgid "Kept in"
 msgstr "Conservées dans"
 
@@ -277,6 +311,12 @@ msgstr "Liste les rapports HTML des audits et nettoyages précédents."
 
 msgid "List the clean runs and what they did."
 msgstr "Liste les nettoyages et ce qu'ils ont fait."
+
+msgid "Listing media files"
+msgstr "Recherche des fichiers médias"
+
+msgid "MB"
+msgstr "Mo"
 
 msgid "Media files scanned"
 msgstr "Fichiers média analysés"
@@ -346,6 +386,26 @@ msgstr "Rien à nettoyer : aucun doublon et aucun fichier cassé."
 msgid "Nothing was changed."
 msgstr "Rien n'a été modifié."
 
+#, python-brace-format
+msgid ""
+"Only analyse files with these extensions, e.g. --ext png,webp "
+"(repeatable). Default: every supported extension: {extensions}."
+msgstr ""
+"N'analyse que les fichiers ayant ces extensions, p. ex. --ext png,webp "
+"(répétable). Par défaut : toutes les extensions prises en charge : "
+"{extensions}."
+
+msgid ""
+"Only files of the same size can be identical: their first and last 64 KB "
+"rule most of them out quickly."
+msgstr ""
+"Seuls des fichiers de même taille peuvent être identiques : leurs "
+"premiers et derniers 64 Ko écartent vite la plupart d'entre eux."
+
+#, python-brace-format
+msgid "Only these extensions are analysed: {extensions}."
+msgstr "Seules ces extensions sont analysées : {extensions}."
+
 msgid "Open index.html in the folder mounted on /reports: it lists every report."
 msgstr ""
 "Ouvrez index.html dans le dossier monté sur /reports : il liste tous les "
@@ -356,9 +416,6 @@ msgstr "Origine"
 
 msgid "Output (override general.* of config.toml)"
 msgstr "Affichage (remplace general.* de config.toml)"
-
-msgid "Path"
-msgstr "Chemin"
 
 #, python-brace-format
 msgid "Permanently delete the quarantine of {runs} ({size})?"
@@ -379,8 +436,22 @@ msgstr "Quarantaine vidée : {size} libérés."
 msgid "Quarantined"
 msgstr "En quarantaine"
 
+msgid ""
+"Reads the remaining candidates in full: same SHA-256 means identical, "
+"byte for byte."
+msgstr ""
+"Lit entièrement les candidats restants : même SHA-256 veut dire "
+"identiques, octet par octet."
+
 msgid "Reason"
 msgstr "Raison"
+
+msgid ""
+"Rebuilds each deleted copy from the kept one, and brings quarantined "
+"files back."
+msgstr ""
+"Recrée chaque copie supprimée à partir de celle gardée, et ramène les "
+"fichiers mis en quarantaine."
 
 msgid "Remove ':ro' from their -v options to let 'clean' act."
 msgstr "Retirez ':ro' de leurs options -v pour que 'clean' puisse agir."
@@ -425,6 +496,9 @@ msgstr "Exécution dont la quarantaine est supprimée ; toutes par défaut."
 msgid "Run {run_id} has no quarantine."
 msgstr "L'exécution {run_id} n'a pas de quarantaine."
 
+msgid "Scan (override scan.* of config.toml)"
+msgstr "Analyse (remplace scan.* de config.toml)"
+
 msgid "Setting"
 msgstr "Réglage"
 
@@ -449,9 +523,15 @@ msgstr "Espace libérable"
 msgid "State"
 msgstr "État"
 
+msgid "TB"
+msgstr "To"
+
 #, python-brace-format
 msgid "The configuration file {path} is not valid TOML: {error}"
 msgstr "Le fichier de configuration {path} n'est pas du TOML valide : {error}"
+
+msgid "The current folder (PowerShell, or bash on WSL, Linux, macOS):"
+msgstr "Le dossier courant (PowerShell, ou bash sous WSL, Linux, macOS) :"
 
 msgid "The quarantine is empty."
 msgstr "La quarantaine est vide."
@@ -466,6 +546,16 @@ msgstr ""
 #, python-brace-format
 msgid "These folders are mounted read-only: {folders}."
 msgstr "Ces dossiers sont montés en lecture seule : {folders}."
+
+msgid ""
+"To keep settings, mount a folder of yours on /config, e.g. -v \"$HOME"
+"\\media-dedup\\config:/config\": config.toml is created there, commented,"
+" on the first run; edit it with any text editor."
+msgstr ""
+"Pour garder vos réglages, montez un de vos dossiers sur /config, p. ex. "
+"-v \"$HOME\\media-dedup\\config:/config\" : config.toml y est créé, "
+"commenté, au premier lancement ; modifiez-le avec n'importe quel éditeur "
+"de texte."
 
 msgid "Type"
 msgstr "Type"
@@ -483,6 +573,13 @@ msgstr "Valeur"
 
 msgid "Video cannot be opened"
 msgstr "Vidéo impossible à ouvrir"
+
+msgid ""
+"Walks through every folder; photos and videos are recognised by their "
+"extension."
+msgstr ""
+"Parcourt tous les dossiers ; photos et vidéos sont reconnues à leur "
+"extension."
 
 msgid "When to use colours (NO_COLOR is honoured too)."
 msgstr "Quand utiliser les couleurs (NO_COLOR est aussi respecté)."
@@ -507,8 +604,15 @@ msgstr "[o/N]"
 msgid "[yellow]not mounted[/] — nothing kept after the run"
 msgstr "[yellow]non monté[/] — rien n'est conservé après l'exécution"
 
+msgid "[yellow]not mounted[/] — nothing to analyse"
+msgstr "[yellow]non monté[/] — rien à analyser"
+
 msgid "a file changed since the audit"
 msgstr "un fichier a changé depuis l'audit"
+
+#, python-brace-format
+msgid "about {time} left"
+msgstr "encore ~{time}"
 
 msgid "audit"
 msgstr "audit"
@@ -534,6 +638,10 @@ msgstr "défaut"
 #, python-format
 msgid "duplicate copies in %(groups)s groups"
 msgstr "copies en double dans %(groups)s groupes"
+
+#, python-brace-format
+msgid "elapsed {time}"
+msgstr "écoulé {time}"
 
 msgid "en"
 msgstr "fr"
@@ -593,6 +701,34 @@ msgstr "o"
 
 msgid "yes"
 msgstr "oui"
+
+#, python-brace-format
+msgid ""
+"{count} file is both in {kept} (kept) and in {removed} (deleted), {size} "
+"freed."
+msgid_plural ""
+"{count} files are both in {kept} (kept) and in {removed} (deleted), "
+"{size} freed."
+msgstr[0] ""
+"{count} fichier est à la fois dans {kept} (gardé) et dans {removed} "
+"(supprimé), gain de {size}."
+msgstr[1] ""
+"{count} fichiers sont à la fois dans {kept} (gardés) et dans {removed} "
+"(supprimés), gain de {size}."
+
+#, python-brace-format
+msgid ""
+"{count} file is present several times in {kept}: one copy is kept ({size}"
+" freed)."
+msgid_plural ""
+"{count} files are present several times in {kept}: one copy of each is "
+"kept ({size} freed)."
+msgstr[0] ""
+"{count} fichier est présent plusieurs fois dans {kept} : un exemplaire "
+"est gardé (gain de {size})."
+msgstr[1] ""
+"{count} fichiers sont présents plusieurs fois dans {kept} : un exemplaire"
+" de chacun est gardé (gain de {size})."
 
 #, python-brace-format
 msgid "{count} report deleted."

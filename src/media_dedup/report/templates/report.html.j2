@@ -13,14 +13,14 @@
 <p>{{ _("Folders analysed:") }} {% for root in report.roots %}<code>{{ root }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
 
 <div class="cards">
-  <div class="card"><div class="value">{{ s.files_scanned }}</div><div class="label">{{ _("media files scanned") }}</div></div>
-  <div class="card"><div class="value">{{ s.duplicate_files }}</div><div class="label">{{ _("duplicate copies in %(groups)s groups", groups=s.duplicate_groups) }}</div></div>
+  <div class="card"><div class="value">{{ s.files_scanned | number }}</div><div class="label">{{ _("media files scanned") }}</div></div>
+  <div class="card"><div class="value">{{ s.duplicate_files | number }}</div><div class="label">{{ _("duplicate copies in %(groups)s groups", groups=s.duplicate_groups | number) }}</div></div>
   {% if is_clean %}
   <div class="card"><div class="value">{{ s.freed_bytes | size }}</div><div class="label">{{ _("freed") }}</div></div>
   {% else %}
   <div class="card"><div class="value">{{ s.reclaimable_bytes | size }}</div><div class="label">{{ _("can be freed") }}</div></div>
   {% endif %}
-  <div class="card"><div class="value">{{ s.broken_files }}</div><div class="label">{{ _("broken files") }}</div></div>
+  <div class="card"><div class="value">{{ s.broken_files | number }}</div><div class="label">{{ _("broken files") }}</div></div>
 </div>
 
 {% if not is_clean %}
@@ -42,7 +42,7 @@
 <table>
   <tr><th>{{ _("Kept in") }}</th><th>{{ _("Deleted from") if is_clean else _("Will be deleted from") }}</th><th class="num">{{ _("Files") }}</th><th class="num">{{ _("Size") }}</th></tr>
   {% for pair in report.pairs %}
-  <tr><td>{{ pair.kept_in }}</td><td>{{ pair.removed_from }}</td><td class="num">{{ pair.files }}</td><td class="num">{{ pair.size | size }}</td></tr>
+  <tr><td>{{ pair.kept_in }}</td><td>{{ pair.removed_from }}</td><td class="num">{{ pair.files | number }}</td><td class="num">{{ pair.size | size }}</td></tr>
   {% endfor %}
 </table>
 {% endif %}
@@ -59,7 +59,7 @@
   </ul>
 </div>
 {% endfor %}
-{% if report.hidden_groups %}<p class="muted">{{ _("… and %(count)s more groups (largest files are shown first).", count=report.hidden_groups) }}</p>{% endif %}
+{% if report.hidden_groups %}<p class="muted">{{ _("… and %(count)s more groups (largest files are shown first).", count=report.hidden_groups | number) }}</p>{% endif %}
 {% endif %}
 
 {% if report.broken.handled or report.broken.protected %}
