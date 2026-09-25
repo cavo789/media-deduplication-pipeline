@@ -7,7 +7,7 @@
 
 # @cat Reports
 # @cmd reports
-# @desc Serve the HTML reports (default /tmp/media-dedup/reports) on a free port chosen by the OS — 'reports [dir]'
+# @desc Serve HTML reports on a free port — 'reports [dir]'
 function reports() {
     local -r dir="${1:-/tmp/media-dedup/reports}"
     local -r max_wait_steps=50
@@ -43,7 +43,7 @@ function reports() {
 
 # @cat Reports
 # @cmd reports_stop
-# @desc Stop every report server started by 'reports'
+# @desc Stop every report server
 function reports_stop() {
     if pkill -f "http.server 0 --bind 127.0.0.1" 2>/dev/null; then
         printf "🛑 Report server(s) stopped.\n"

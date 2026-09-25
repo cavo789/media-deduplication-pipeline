@@ -6,16 +6,44 @@
 # shellcheck shell=bash
 
 # @cat Docker image
-# @cmd image
-# @desc Build the tool image media-dedup:latest from the root Dockerfile
-function image() {
+# @cmd build
+# @desc Build media-dedup:latest
+function build() {
     printf "🏗️  Building media-dedup:latest...\n"
     docker build --tag media-dedup:latest "$(_repo_root)"
 }
 
 # @cat Docker image
+# @cmd push
+# @desc Build + publish to Docker Hub (latest, version)
+function push() {
+    # The namespace is overridable so a fork can publish under its own Docker Hub account.
+    local -r repository="${DOCKER_HUB_NAMESPACE:-cavo789}/media-dedup"
+    local version
+    version="$(sed -n 's/^version = "\(.*\)"$/\1/p' "$(_repo_root)/pyproject.toml")"
+    if [[ -z "${version}" ]]; then
+        printf "❌ Cannot read the version from pyproject.toml\n" >&2
+        return 1
+    fi
+
+    build || return 1
+
+    local tag
+    for tag in latest "${version}"; do
+        docker tag media-dedup:latest "${repository}:${tag}" || return 1
+        printf "🚀 Pushing %s:%s...\n" "${repository}" "${tag}"
+        if ! docker push "${repository}:${tag}"; then
+            printf "❌ Push failed — log in first with: docker login --username %s\n" \
+                "${repository%%/*}" >&2
+            return 1
+        fi
+    done
+    printf "✅ Published https://hub.docker.com/r/%s\n" "${repository}"
+}
+
+# @cat Docker image
 # @cmd dive
-# @desc Explore the layers of media-dedup:latest interactively with dive (build it first with 'image')
+# @desc Explore image layers with dive
 function dive() {
     # The socket path is resolved on the Docker host (docker-outside-of-docker), where it exists.
     docker run --rm -it \
@@ -25,7 +53,7 @@ function dive() {
 
 # @cat Docker image
 # @cmd dive_ci
-# @desc Fail if media-dedup:latest wastes space (dive CI mode, strict efficiency thresholds)
+# @desc Fail if the image wastes space (dive CI)
 function dive_ci() {
     # Thresholds are flags rather than a .dive-ci file: a file would have to be bind-mounted from
     # a host path, which docker-outside-of-docker makes awkward. The ~2.2 % of "user" waste is
@@ -43,9 +71,9 @@ function dive_ci() {
 
 # @cat Docker image
 # @cmd e2e
-# @desc Build the image then run the end-to-end tests (real docker run, :ro mounts, clean, undo)
+# @desc Build, then run the end-to-end tests
 function e2e() {
-    image || return 1
+    build || return 1
     (
         cd "$(_repo_root)" || return 1
         pytest -m e2e "$@"

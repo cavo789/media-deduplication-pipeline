@@ -7,7 +7,7 @@
 
 # @cat Tool
 # @cmd dedup
-# @desc Run media-dedup from the sources with every mount redirected to /tmp/media-dedup/ — e.g. 'dedup audit'
+# @desc Run the CLI from sources — e.g. 'dedup audit'
 function dedup() {
     local -a env_vars
     mapfile -t env_vars < <(_media_dedup_env)
@@ -19,7 +19,7 @@ function dedup() {
 
 # @cat Tool
 # @cmd demo
-# @desc Generate sample photos/videos (duplicates, copies, broken files) in /tmp/media-dedup/data, then audit them
+# @desc Generate sample media in /tmp/media-dedup, then audit
 function demo() {
     local -r data_dir="/tmp/media-dedup/data"
     printf "🧪 Generating demo media in %s...\n" "${data_dir}"

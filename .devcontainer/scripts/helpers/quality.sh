@@ -7,7 +7,7 @@
 
 # @cat Quality
 # @cmd check
-# @desc Full gate: every pre-commit hook (ruff, mypy, pylint, shellcheck, shfmt, hadolint) then all tests with coverage
+# @desc Full gate: pre-commit hooks + tests with coverage
 function check() {
     (
         cd "$(_repo_root)" || return 1
@@ -24,7 +24,7 @@ function check() {
 
 # @cat Quality
 # @cmd format
-# @desc Auto-fix: ruff format + ruff check --fix on the whole project
+# @desc Auto-fix: ruff format + ruff check --fix
 function format() {
     (
         cd "$(_repo_root)" || return 1
@@ -34,7 +34,7 @@ function format() {
 
 # @cat Quality
 # @cmd tests
-# @desc Run pytest without coverage — pass targets/flags, e.g. 'tests tests/unit/plan -k keeper'
+# @desc Run pytest — e.g. 'tests tests/unit -k keeper'
 function tests() {
     (
         cd "$(_repo_root)" || return 1

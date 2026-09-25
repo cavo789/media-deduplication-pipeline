@@ -7,7 +7,7 @@
 
 # @cat i18n
 # @cmd i18n_extract
-# @desc Extract every _() string (Python + Jinja templates) into the media_dedup.pot template
+# @desc Extract _() strings into media_dedup.pot
 function i18n_extract() {
     (
         cd "$(_repo_root)" || return 1
@@ -19,7 +19,7 @@ function i18n_extract() {
 
 # @cat i18n
 # @cmd i18n_update
-# @desc Extract, then merge new strings into every locale's .po file (translate them afterwards)
+# @desc Extract + merge into every .po (then translate)
 function i18n_update() {
     i18n_extract || return 1
     (

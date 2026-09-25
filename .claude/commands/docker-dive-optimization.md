@@ -33,7 +33,7 @@ State which target was selected before moving on.
 ## 2. Build the image
 
 For the project Dockerfile (`Dockerfile` at repo root), the canonical build command is the
-`image` helper of the devcontainer cheatsheet, i.e.:
+`build` helper of the devcontainer cheatsheet, i.e.:
 
 ```bash
 docker build --tag media-dedup:latest .
