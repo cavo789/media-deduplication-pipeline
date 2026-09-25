@@ -5,6 +5,20 @@ dossiers et plusieurs disques — d'un seul `docker run`, sous Windows (PowerShe
 
 🇬🇧 [English version](README.md)
 
+## Démarrage rapide
+
+Avec Docker installé, une seule commande audite un dossier :
+
+```powershell
+docker run --rm -it -v "C:\Photos:/data/c/Photos:ro" cavo789/media-dedup --locale fr audit
+```
+
+Elle liste les photos et vidéos en double ou cassées de `C:\Photos`, sans rien modifier : `:ro`
+(lecture seule) fait interdire toute écriture par Docker lui-même. Le premier lancement
+télécharge l'image tout seul.
+
+Ce qu'elle fait :
+
 - **Doublons exacts** : même taille et même SHA-256, comparés à nouveau octet par octet juste
   avant toute suppression. Détectés entre dossiers *et* entre disques (`C:` et `D:` dans la même
   exécution).
@@ -17,13 +31,167 @@ dossiers et plusieurs disques — d'un seul `docker run`, sous Windows (PowerShe
 
 ## Sommaire
 
+- [Ce qui s'affiche pendant l'analyse](#ce-qui-saffiche-pendant-lanalyse)
+- [Lire le résultat](#lire-le-résultat)
+- [Aller plus loin](#aller-plus-loin)
 - [Comment vos photos restent en sécurité](#comment-vos-photos-restent-en-sécurité)
-- [Démarrage rapide](#démarrage-rapide)
 - [Points de montage](#points-de-montage)
 - [Commandes](#commandes)
 - [Configuration](#configuration)
 - [Mises en garde](#mises-en-garde)
 - [Développement](#développement)
+
+## Ce qui s'affiche pendant l'analyse
+
+Chaque étape affiche une ligne de progression et, en dessous en gris, ce qu'elle fait réellement :
+
+```text
+⠴ Preuve d'identité (SHA-256 complet) ━━━━━━━━╸━━━━━━━ 11.707/23.907 écoulé 0:00:47 · encore ~0:02:19
+  Lit entièrement les candidats restants : même SHA-256 veut dire identiques, octet par octet.
+```
+
+- **`11.707/23.907`** : fichiers traités par *cette étape*, sur le nombre qu'elle doit traiter.
+- **`écoulé`** : temps passé dans cette étape. **`encore ~…`** : une estimation pour cette étape
+  seulement, d'après sa vitesse jusqu'ici. Elle bouge : quelques grosses vidéos la ralentissent,
+  des petites photos l'accélèrent.
+- **Durée totale** : la ligne *Durée* du résumé, à la fin.
+- **Ctrl+C** arrête à tout moment, sans message d'erreur. Un audit ne modifie jamais rien ; un
+  `clean` interrompu est journalisé, `undo` restaure donc ce qu'il a fait.
+
+| À l'écran | Ce que l'étape fait réellement |
+|---|---|
+| Recherche des fichiers médias | Parcourt tous les dossiers montés et garde les photos, fichiers RAW et vidéos, [reconnus à leur extension](#aller-plus-loin). Les autres fichiers (`.xmp`, documents, …) sont ignorés. Le total n'est pas encore connu : un compteur remplace la barre. |
+| Vérification de la lisibilité des fichiers | Repère les fichiers cassés : vides (0 octet), images impossibles à décoder (chacune est décodée entièrement, un processus par cœur), vidéos que `ffprobe` ne peut pas ouvrir. Les fichiers RAW sont seulement vérifiés comme non vides. |
+| Comparaison des fichiers de même taille | Deux fichiers ne peuvent être identiques que s'ils ont la même taille. Pour ceux-là, lit leurs premiers et derniers 64 Ko : rapide, et cela en écarte la plupart. |
+| Preuve d'identité (SHA-256 complet) | Lit entièrement les candidats restants et calcule leur empreinte SHA-256 : même empreinte, même contenu, octet par octet. L'étape la plus longue avec de grosses vidéos. |
+| Nettoyage (`clean`) | Recompare chaque copie, octet par octet, avec celle gardée juste avant de la supprimer ; supprime les fichiers vides ; déplace les illisibles en quarantaine ; journalise chaque action. |
+| Restauration (`undo`) | Recrée chaque copie supprimée à partir de celle gardée (date comprise) et ramène les fichiers mis en quarantaine. |
+
+Une étape sans travail est sautée : avec le volume `/cache`, les fichiers déjà vérifiés ou
+hachés par un audit précédent ne sont pas relus.
+
+## Lire le résultat
+
+Voici un exemple sur un gros dossier de photos (noms de dossiers modifiés) :
+
+```text
+Résumé de l'audit
+┌───────────────────────────────────────┬─────────────┐
+│ Fichiers média analysés               │      67.947 │
+│ Copies en trop, supprimables          │      12.633 │
+│ Espace libérable                      │     44,3 Go │
+│ Fichiers cassés (vides ou illisibles) │         180 │
+│ Durée                                 │ 31 min 12 s │
+└───────────────────────────────────────┴─────────────┘
+
+Dossiers partageant des fichiers identiques
+• 1.426 fichiers sont à la fois dans C:\Photos\2013\Vacances (gardés) et dans
+  C:\Photos\Ancien téléphone\Vacances (supprimés), gain de 4,5 Go.
+• 739 fichiers sont présents plusieurs fois dans C:\Photos\Tablette : un exemplaire de chacun
+  est gardé (gain de 2,1 Go).
+• 530 fichiers sont à la fois dans C:\Photos\Téléphone (gardés) et dans
+  C:\Photos\2013\Nouveau dossier (supprimés), gain de 1,6 Go.
+```
+
+| Ligne | Ce qu'elle veut dire |
+|---|---|
+| Fichiers média analysés | Toutes les photos et vidéos trouvées. Les autres fichiers (`.xmp`, documents, …) sont ignorés. |
+| Copies en trop, supprimables | Les fichiers que `clean` supprimerait. Pour chaque photo ou vidéo présente plusieurs fois, un exemplaire est gardé et les autres sont en trop : une photo rangée dans 3 dossiers donne 2 copies en trop. |
+| Espace libérable | La taille totale de ces copies en trop. |
+| Fichiers cassés | Les fichiers vides (0 octet) et ceux qui ne s'ouvrent pas (JPEG tronqué, vidéo abîmée). `clean` supprime les vides et déplace les autres en quarantaine, sans jamais les supprimer directement. |
+| Durée | Le temps qu'a pris tout l'audit. |
+
+Chaque phrase de *Dossiers partageant des fichiers identiques* décrit deux dossiers qui
+contiennent les mêmes fichiers : les copies du premier sont gardées, celles du second sont
+supprimées, et la phrase se termine par l'espace libéré. Les paires qui libèrent le plus d'espace
+viennent en premier. Quand les deux sont le même dossier, les fichiers y sont en double (`IMG_0001.jpg` et
+`IMG_0001 (1).jpg`). Le dossier gardé suit les [règles ci-dessous](#comment-vos-photos-restent-en-sécurité) ;
+ce n'est pas celui que vous voulez ? Indiquez-le dans `--prefer` (ou `folders.preferred`) et
+relancez l'audit.
+
+## Aller plus loin
+
+Chaque étape ajoute une ou deux options `-v` à la même commande. Dans PowerShell, la backtick
+`` ` `` en fin de ligne continue la commande sur la ligne suivante (rien ne doit la suivre, pas
+même un espace).
+
+**Seulement certains types de fichiers** : `--ext` limite l'analyse à certaines extensions,
+répétable ou séparées par des virgules (`--ext png,webp` ; la casse et le point initial
+n'importent pas). `[scan] extensions` dans `config.toml` fait de même. L'audit indique alors les
+extensions analysées. Extensions prises en charge (`media-dedup audit --help` les liste aussi) :
+
+| Type | Extensions |
+|---|---|
+| Images | avif, bmp, gif, heic, heif, jpe, jpeg, jpg, png, tif, tiff, webp |
+| RAW | arw, cr2, cr3, dng, nef, orf, pef, raf, rw2, srw |
+| Vidéos | 3g2, 3gp, avi, flv, m2ts, m4v, mkv, mov, mp4, mpeg, mpg, mts, ts, webm, wmv |
+
+```powershell
+docker run --rm -it -v "C:\Photos:/data/c/Photos:ro" cavo789/media-dedup --locale fr audit --ext png,webp
+```
+
+**Plusieurs dossiers, plusieurs disques** : un `-v` par dossier, `X:\chemin` étant monté sur
+`/data/x/chemin`. Grâce aux guillemets, les chemins avec des espaces fonctionnent.
+
+```powershell
+docker run --rm -it `
+  -v "C:\Photos de famille:/data/c/Photos de famille:ro" `
+  -v "D:\Ancien téléphone:/data/d/Ancien téléphone:ro" `
+  cavo789/media-dedup --locale fr audit
+```
+
+**Garder un rapport HTML** : donnez à l'outil un de vos dossiers sur `/reports`, puis
+double-cliquez sur son `index.html` (aucun serveur nécessaire). Le volume `media-dedup-cache`
+rend les audits suivants bien plus rapides : seuls les fichiers nouveaux ou modifiés sont relus.
+
+```powershell
+mkdir "$HOME\media-dedup\reports"
+docker run --rm -it `
+  -v "C:\Photos:/data/c/Photos:ro" `
+  -v "$HOME\media-dedup\reports:/reports" `
+  -v media-dedup-cache:/cache `
+  cavo789/media-dedup --locale fr audit
+```
+
+Dans le rapport, commencez par le tableau des *paires de dossiers* : il montre quel dossier garde
+ses copies et quel dossier les perd.
+
+**Nettoyer** : les mêmes dossiers **sans `:ro`**, plus un journal (c'est lui qui rend `undo`
+possible) et une quarantaine (où sont mis de côté les fichiers illisibles) :
+
+```powershell
+mkdir "$HOME\media-dedup\journal", "$HOME\media-dedup\quarantine"
+docker run --rm -it `
+  -v "C:\Photos:/data/c/Photos" `
+  -v "$HOME\media-dedup\journal:/journal" `
+  -v "$HOME\media-dedup\quarantine:/quarantine" `
+  -v "$HOME\media-dedup\reports:/reports" `
+  -v media-dedup-cache:/cache `
+  cavo789/media-dedup --locale fr clean
+```
+
+`clean` affiche le résumé et demande confirmation (`--yes` s'en passe). Vous changez d'avis ?
+Relancez la même commande en remplaçant `clean` par `undo`.
+
+**Le dossier courant** : placez-vous dans le dossier avec `cd`, puis lancez la commande
+ci-dessous (dans PowerShell, `${PWD}` est l'équivalent du `$(pwd)` de Linux ; dans l'ancienne
+console `cmd.exe`, écrivez `%cd%`) :
+
+```powershell
+docker run --rm -it -v "${PWD}:/data/current:ro" cavo789/media-dedup --locale fr audit
+```
+
+**Depuis WSL**, utilisez les chemins Linux et lancez le conteneur sous votre identité, pour que
+les fichiers créés vous appartiennent :
+
+```bash
+docker run --rm -it --user "$(id -u):$(id -g)" \
+  -v "/mnt/c/Photos de famille:/data/c/Photos de famille:ro" \
+  cavo789/media-dedup --locale fr audit
+```
+
+**Mettre à jour** : `docker pull cavo789/media-dedup` récupère la dernière version ; un tag comme
+`cavo789/media-dedup:0.1.0` en fixe une.
 
 ## Comment vos photos restent en sécurité
 
@@ -36,68 +204,6 @@ dossiers et plusieurs disques — d'un seul `docker run`, sous Windows (PowerShe
 | Doublons | Réellement supprimés (l'espace est libéré tout de suite) ; `undo` les reconstruit depuis la copie conservée, date comprise, même d'un disque à l'autre. |
 | Fichiers illisibles | Déplacés en quarantaine, jamais supprimés directement ; `purge` les supprime définitivement quand vous êtes sûr·e. |
 | Chaque groupe | Garde toujours au moins une copie. |
-
-## Démarrage rapide
-
-**1. Construire l'image** (depuis un clone de ce dépôt) :
-
-```bash
-docker build --tag media-dedup .
-```
-
-**2. Créer un dossier pour les données de l'outil** : configuration, journal, quarantaine,
-rapports.
-
-```powershell
-mkdir "$HOME\media-dedup\config", "$HOME\media-dedup\journal", "$HOME\media-dedup\quarantine", "$HOME\media-dedup\reports"
-```
-
-**3. Auditer**, en lecture seule (notez le `:ro`). Chaque dossier `X:\chemin` est monté sur
-`/data/x/chemin`, ce qui permet à l'outil d'afficher les vrais chemins Windows. Les chemins avec
-des espaces fonctionnent, entre guillemets.
-
-```powershell
-docker run --rm -it `
-  -v "C:\Family Photos:/data/c/Family Photos:ro" `
-  -v "C:\Users\Public\Pictures:/data/c/Users/Public/Pictures:ro" `
-  -v "D:\backup:/data/d/backup:ro" `
-  -v "$HOME\media-dedup\config:/config" `
-  -v "$HOME\media-dedup\reports:/reports" `
-  -v media-dedup-cache:/cache `
-  media-dedup --locale fr audit
-```
-
-**4. Lire le rapport** : double-cliquez sur `%USERPROFILE%\media-dedup\reports\index.html`, aucun
-serveur n'est nécessaire. Commencez par le tableau des *paires de dossiers* : il montre quel
-dossier garde ses copies et quel dossier les perd.
-
-**5. Nettoyer** avec les mêmes dossiers, **sans `:ro`**, plus le journal et la quarantaine :
-
-```powershell
-docker run --rm -it `
-  -v "C:\Family Photos:/data/c/Family Photos" `
-  -v "C:\Users\Public\Pictures:/data/c/Users/Public/Pictures" `
-  -v "D:\backup:/data/d/backup" `
-  -v "$HOME\media-dedup\config:/config" `
-  -v "$HOME\media-dedup\journal:/journal" `
-  -v "$HOME\media-dedup\quarantine:/quarantine" `
-  -v "$HOME\media-dedup\reports:/reports" `
-  -v media-dedup-cache:/cache `
-  media-dedup --locale fr clean
-```
-
-`clean` affiche le résumé et demande confirmation (`--yes` s'en passe). Vous changez d'avis ?
-Relancez la même commande en remplaçant `clean` par `undo`.
-
-**Depuis WSL**, utilisez les chemins Linux et lancez le conteneur sous votre identité, pour que
-les fichiers créés vous appartiennent :
-
-```bash
-docker run --rm -it --user "$(id -u):$(id -g)" \
-  -v "/mnt/c/Family Photos:/data/c/Family Photos:ro" \
-  -v "$HOME/media-dedup/reports:/reports" \
-  media-dedup --locale fr audit
-```
 
 ## Points de montage
 
@@ -129,19 +235,35 @@ Les options globales se placent **avant** la commande : `media-dedup --locale fr
 
 | Option | Rôle |
 |---|---|
-| `--locale en\|fr` | Langue de l'interface (anglais par défaut). |
+| `--locale en\|fr` | Langue de l'interface (anglais par défaut) ; les nombres et tailles la suivent : `67,947` et `44.3 GB`, ou `67.947` et `44,3 Go`. |
 | `--verbosity error\|warning\|info\|debug` | Niveau de détail des journaux. |
 | `--color auto\|always\|never` | Couleurs ANSI (`NO_COLOR` est respecté). |
 | `--prefer CHEMIN` | (`audit`, `clean`) Dossier dont les copies sont conservées en priorité ; répétable, l'ordre compte. |
 | `--protect CHEMIN` | (`audit`, `clean`) Dossier jamais modifié ; ses fichiers sont les copies conservées. |
 | `--exclude CHEMIN` | (`audit`, `clean`) Dossier jamais analysé. |
+| `--ext EXT` | (`audit`, `clean`) N'analyse que ces extensions (`--ext png,webp`) ; toutes celles prises en charge par défaut. |
 | `--yes`, `-y` | (`clean`, `purge`) Ne pas demander de confirmation. |
 
 `media-dedup --help` et `media-dedup <commande> --help` documentent tout, dans les deux langues.
 
 ## Configuration
 
-`/config/config.toml` est créé au premier lancement. Priorité, de la plus forte à la plus
+L'outil tourne dans un conteneur : il ne voit que les dossiers de votre ordinateur que vous
+*montez*, et c'est le rôle de `-v "<un de vos dossiers>:<emplacement dans le conteneur>"`. La
+configuration se trouve dans le conteneur en `/config/config.toml` : donnez-lui donc un de vos
+dossiers sur `/config` :
+
+```powershell
+mkdir "$HOME\media-dedup\config"
+docker run --rm -it -v "$HOME\media-dedup\config:/config" cavo789/media-dedup --locale fr config
+```
+
+À ce premier lancement, un `config.toml` commenté apparaît dans ce dossier : ouvrez
+`%USERPROFILE%\media-dedup\config\config.toml` avec n'importe quel éditeur de texte. Gardez le
+même `-v …:/config` dans chaque commande pour que l'outil le lise. `media-dedup config` montre
+chaque réglage, son origine, et le dossier de votre ordinateur derrière chaque point de montage.
+
+Priorité, de la plus forte à la plus
 faible : options de ligne de commande, puis variables d'environnement
 `MEDIA_DEDUP_<SECTION>__<CLÉ>` (p. ex. `MEDIA_DEDUP_GENERAL__LOCALE=fr` ; listes en tableau JSON),
 puis le fichier, puis les valeurs par défaut.
@@ -157,6 +279,9 @@ preferred = ['C:\Family Photos', 'C:\Users\Public\Pictures']
 protected = []
 excluded = ['D:\backup']
 
+[scan]
+extensions = []       # p. ex. ["png", "webp"] ; vide : toutes les extensions prises en charge
+
 [clean]
 confirm = true
 ```
@@ -167,6 +292,8 @@ confirm = true
   référence ».
 - **`excluded`** : jamais analysés. À utiliser pour une vraie sauvegarde qui doit rester une
   seconde copie.
+- **`extensions`** : [seuls ces types de fichiers](#aller-plus-loin) sont
+  analysés.
 
 Écrivez les chemins Windows entre **apostrophes**. Entre guillemets, TOML transforme le `\b` de
 `"D:\backup"` en caractère de contrôle ; l'outil refuse alors ce chemin au lieu de l'ignorer.
@@ -181,11 +308,26 @@ confirm = true
   laissez ce dossier de côté.
 - **Les disques Windows sont lents via Docker** : le premier audit lit chaque image, ainsi que
   chaque fichier qui a la même taille qu'un autre. Avec `-v media-dedup-cache:/cache`, les
-  audits suivants ne lisent que les fichiers nouveaux ou modifiés.
+  audits suivants ne lisent que les fichiers nouveaux ou modifiés. Rien que lister des dizaines
+  de milliers de fichiers prend quelques minutes :
+  [chaque étape affiche sa progression](#ce-qui-saffiche-pendant-lanalyse).
 - **Lancez avec `-it`** : sans terminal, `clean` ne peut pas demander confirmation (utilisez
   `--yes`) et les couleurs sont désactivées.
 
 ## Développement
+
+**Construire l'image depuis les sources** : utile seulement pour modifier l'outil. Partout où
+ce README indique `cavo789/media-dedup`, utilisez alors votre image locale `media-dedup` :
+
+```bash
+git clone https://github.com/cavo789/media-deduplication-pipeline.git
+cd media-deduplication-pipeline
+docker build --tag media-dedup .
+```
+
+Pour publier une nouvelle version, le mainteneur lance `push` (voir ci-dessous) : l'image est
+construite puis `cavo789/media-dedup:latest` et `:<version>` (lue dans `pyproject.toml`) sont
+poussées sur Docker Hub. Se connecter une fois au préalable avec `docker login --username cavo789`.
 
 Ouvrez le dépôt dans le devcontainer (VS Code, *Reopen in Container*). Chaque nouveau
 terminal affiche la liste des commandes d'aide (`welcome` la réaffiche) :
@@ -196,7 +338,7 @@ terminal affiche la liste des commandes d'aide (`welcome` la réaffiche) :
 | `format`, `tests` | Corrige la mise en forme ; lance des tests ciblés. |
 | `dedup …`, `demo` | Lance l'outil depuis les sources sur `/tmp/media-dedup/` ; `demo` crée une arborescence d'exemple et l'audite. |
 | `reports`, `reports_stop` | Sert les rapports HTML sur un port libre choisi par le système. |
-| `image`, `e2e`, `dive`, `dive_ci` | Construit l'image, lance les tests de bout en bout, inspecte ou contrôle ses couches. |
+| `build`, `push`, `e2e`, `dive`, `dive_ci` | Construit l'image, la publie sur Docker Hub (`cavo789/media-dedup`, `:latest` et `:<version>`), lance les tests de bout en bout, inspecte ou contrôle ses couches. |
 | `i18n_extract`, `i18n_update` | Met à jour les catalogues gettext après la modification d'un texte affiché. |
 | `todos` | Liste les TODOs ouverts (`.todos/`, voir `/todo` et `/todo-plan`). |
 

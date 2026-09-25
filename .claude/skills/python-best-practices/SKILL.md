@@ -79,6 +79,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from mymodule import HeavyClass
 
+
 def process(obj: HeavyClass) -> None:  # string annotation, no runtime import
     ...
 ```
@@ -91,9 +92,10 @@ class Config(BaseModel):
     ecosystem: str
     strict: bool = False
 
-cfg = Config(ecosystem="python", strict=True)        # create: explicit params
+
+cfg = Config(ecosystem="python", strict=True)  # create: explicit params
 cfg = Config.model_validate(json.loads(user_input))  # untrusted data: model_validate
-new_cfg = cfg.model_copy(update={"strict": False})   # update: never mutate, always copy
+new_cfg = cfg.model_copy(update={"strict": False})  # update: never mutate, always copy
 ```
 
 Early return:
@@ -105,6 +107,7 @@ def validate(x):
         return process(x)
     else:
         return None
+
 
 # Good: early return
 def validate(x):
@@ -119,6 +122,7 @@ Too many parameters (PLR0913):
 # Bad: 7 positional parameters
 def run(tool, stage, ecosystem, strict, timeout, retry, parallel): ...
 
+
 # Good: one frozen options object
 class RunOpts(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -130,6 +134,7 @@ class RunOpts(BaseModel):
     retry: int
     parallel: bool
 
+
 def run(opts: RunOpts): ...
 ```
 
@@ -137,13 +142,17 @@ Magic number → named constant:
 
 ```python
 # Bad
-if count > 50: ...
+if count > 50:
+    ...
+
 
 # Good
 class Thresholds(IntEnum):
     COLLECTION_WARN = 50
 
-if count > Thresholds.COLLECTION_WARN: ...
+
+if count > Thresholds.COLLECTION_WARN:
+    ...
 ```
 
 Async (structured concurrency + subprocess):
@@ -155,8 +164,10 @@ async def main():
         tg.create_task(bar())
     # both completed or one raised; no silent failures
 
+
 proc = await asyncio.create_subprocess_exec(
-    "command", "arg1",
+    "command",
+    "arg1",
     stdout=asyncio.subprocess.PIPE,
     stderr=asyncio.subprocess.PIPE,
 )

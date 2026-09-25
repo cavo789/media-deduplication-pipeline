@@ -76,6 +76,10 @@ def build_runtime(cli_layer: Layer) -> Runtime:
 def runtime_of(ctx: typer.Context) -> Runtime:
     """Return the runtime the root callback stored in the Typer context.
 
+    Every command calls it first: it also schedules an empty line after the
+    command's last message, before the shell prompt comes back (`--help` never
+    reaches a command, so its output is left as is).
+
     Args:
         ctx: Typer context of the running command.
 
@@ -88,6 +92,7 @@ def runtime_of(ctx: typer.Context) -> Runtime:
     runtime = ctx.obj
     if not isinstance(runtime, Runtime):
         raise TypeError(type(runtime).__name__)
+    ctx.call_on_close(runtime.output.blank)
     return runtime
 
 
@@ -109,3 +114,15 @@ def folder_layer(
     given = {"preferred": prefer, "protected": protect, "excluded": exclude}
     folders: dict[str, object] = {key: value for key, value in given.items() if value}
     return {"folders": folders} if folders else {}
+
+
+def scan_layer(extensions: list[str] | None) -> Layer:
+    """Turn the `--ext` option of a command into a settings layer.
+
+    Args:
+        extensions: `--ext` values (validated and split by the settings).
+
+    Returns:
+        The `[scan]` overrides actually given.
+    """
+    return {"scan": {"extensions": extensions}} if extensions else {}

@@ -52,3 +52,37 @@ def test_is_within_ignores_case_and_matches_whole_parts() -> None:
     assert is_within(Path("/data/c/photos/x.jpg"), Path("/data/c/Photos"))
     assert is_within(Path("/data/c/Photos"), Path("/data/c/Photos"))
     assert not is_within(Path("/data/c/Photos2/x.jpg"), Path("/data/c/Photos"))
+
+
+DESKTOP = HostPathMapper(
+    Path("/data"),
+    ((Path("/data/current"), "C:\\Photos"), (Path("/data/e"), "E:\\")),
+)
+
+
+@pytest.mark.parametrize(
+    ("container", "host"),
+    [
+        ("/data/current", "C:\\Photos"),
+        ("/data/current/2013/IMG.jpg", "C:\\Photos\\2013\\IMG.jpg"),
+        ("/data/e/x", "E:\\x"),
+        ("/data/c/Other", "C:\\Other"),
+    ],
+)
+def test_to_host_prefers_the_known_windows_source(container: str, host: str) -> None:
+    """A folder mounted anywhere shows its real Windows path when Docker tells it."""
+    assert DESKTOP.to_host(Path(container)) == host
+
+
+@pytest.mark.parametrize(
+    ("host", "container"),
+    [
+        ("c:\\photos\\2013", "/data/current/2013"),
+        ("C:\\Photos", "/data/current"),
+        ("C:\\Photos2", "/data/c/Photos2"),
+        ("E:\\x", "/data/e/x"),
+    ],
+)
+def test_to_container_uses_the_known_windows_source(host: str, container: str) -> None:
+    """Folders typed as Windows paths find their mount point, whatever it is."""
+    assert DESKTOP.to_container(host) == Path(container)

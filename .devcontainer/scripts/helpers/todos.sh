@@ -7,7 +7,7 @@
 
 # @cat Backlog
 # @cmd todos
-# @desc List the open TODOs (ID, priority, title) — the execution order lives in .todos/plan.md
+# @desc List open TODOs (order in .todos/plan.md)
 function todos() {
     (
         cd "$(_repo_root)" || return 1

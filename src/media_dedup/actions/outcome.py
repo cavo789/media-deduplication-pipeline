@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -26,6 +27,7 @@ class Tally:
     quarantined: int = 0
     skipped: list[Incident] = field(default_factory=list[Incident])
     failed: list[Incident] = field(default_factory=list[Incident])
+    started: float = field(default_factory=time.monotonic)
 
     def freeze(self) -> Outcome:
         """Snapshot the counters.
@@ -39,6 +41,7 @@ class Tally:
             quarantined=self.quarantined,
             skipped=tuple(self.skipped),
             failed=tuple(self.failed),
+            seconds=time.monotonic() - self.started,
         )
 
 
@@ -51,3 +54,4 @@ class Outcome:
     quarantined: int
     skipped: tuple[Incident, ...]
     failed: tuple[Incident, ...]
+    seconds: float = 0.0

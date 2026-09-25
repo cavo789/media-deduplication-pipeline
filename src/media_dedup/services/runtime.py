@@ -56,9 +56,10 @@ class Runtime:
         """Translator between container and host paths.
 
         Returns:
-            The mapper rooted at the data directory.
+            The mapper rooted at the data directory, aware of the Windows folders
+            Docker Desktop mounted.
         """
-        return HostPathMapper(self.locations.data_dir)
+        return HostPathMapper(self.locations.data_dir, self.mounts.host_sources)
 
     def persistent(self, kind: MountKind) -> bool:
         """Tell whether data written to a mount point survives the container.

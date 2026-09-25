@@ -8,7 +8,7 @@ import typer
 from rich.table import Table
 
 from media_dedup.cli.context import runtime_of, user_errors
-from media_dedup.console.formatting import human_size
+from media_dedup.console.formatting import human_number, human_size
 from media_dedup.constants import RunKind
 from media_dedup.errors import MountError
 from media_dedup.i18n import _, ngettext
@@ -52,7 +52,7 @@ def reports_command(
             ngettext(
                 "{count} report deleted.", "{count} reports deleted.", len(removed)
             ).format(
-                count=len(removed),
+                count=human_number(len(removed)),
             ),
         )
     index = write_index(reports_dir)
@@ -72,10 +72,10 @@ def reports_command(
         table.add_row(
             summary.folder,
             _("clean") if is_clean else _("audit"),
-            str(summary.files_scanned),
-            str(summary.duplicate_files),
+            human_number(summary.files_scanned),
+            human_number(summary.duplicate_files),
             human_size(summary.freed_bytes if is_clean else summary.reclaimable_bytes),
-            str(summary.broken_files),
+            human_number(summary.broken_files),
         )
     output.show(table)
     output.tip(

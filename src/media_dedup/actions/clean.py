@@ -14,6 +14,7 @@ from media_dedup.actions.verify import removal_blocker
 from media_dedup.constants import ActionKind, BrokenReason, Phase, Status
 from media_dedup.i18n import _
 from media_dedup.scan.hashing import full_digest
+from media_dedup.scan.progress import Step
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -60,9 +61,14 @@ class CleanExecutor:
         Returns:
             What was done, skipped and why.
         """
-        self._context.progress.start(
-            _("Cleaning"), plan.removable_count + len(plan.broken)
+        step = Step(
+            _("Cleaning"),
+            _(
+                "Each copy is compared again with the kept one before deletion; "
+                "unreadable files go to the quarantine."
+            ),
         )
+        self._context.progress.start(step, plan.removable_count + len(plan.broken))
         for decision in plan.decisions:
             for file in decision.removable:
                 self._guarded(file, partial(self._delete_copy, decision, file))

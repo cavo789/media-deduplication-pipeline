@@ -83,3 +83,4 @@ class AuditFindings:
     files_scanned: int
     roots: tuple[Path, ...]
     plan: CleanPlan
+    seconds: float = 0.0

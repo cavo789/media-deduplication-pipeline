@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -49,6 +50,10 @@ def test_help_is_translated() -> None:
     install(Locale.FR)
     result = CliRunner().invoke(build_app(), ["--help"])
     assert "Trouve et nettoie" in result.output
+    # Examples stay on one line each: a PowerShell copy/paste must be one command.
+    assert 'docker run --rm -it -v "${PWD}:/data/current:ro" media-dedup audit' in (
+        result.output
+    )
 
 
 def test_version() -> None:
@@ -115,3 +120,16 @@ def test_main_installs_the_locale_before_building_the_help(
         main()
     assert caught.value.code == 0
     assert "Trouve et nettoie" in capsys.readouterr().out
+
+
+def test_ext_limits_the_audit_to_some_extensions(cli: CliRunner) -> None:
+    """`--ext` analyses only the extensions asked for, says so, and rejects typos."""
+    result = run(cli, "audit", "--ext", "PNG", "--ext", ".webp,png")
+    assert result.exit_code == 0, result.output
+    assert "Only these extensions are analysed: .png, .webp." in result.output
+    assert re.search(r"Media files scanned\s*│\s*1 │", result.output)
+    typo = run(cli, "audit", "--ext", "jpgg")
+    assert typo.exit_code == 1
+    assert ".jpgg; supported: 3g2" in typo.output
+    help_text = " ".join(run(cli, "audit", "--help").output.replace("│", " ").split())
+    assert "Default: every supported extension: 3g2, 3gp, arw," in help_text

@@ -4,6 +4,9 @@ msgstr ""
 msgid "'undo' can no longer restore these broken files."
 msgstr ""
 
+msgid "A Windows folder (PowerShell):"
+msgstr ""
+
 #, python-brace-format
 msgid "A commented configuration file was created: {path}."
 msgstr ""
@@ -47,10 +50,16 @@ msgstr ""
 msgid "Audit, confirm, then really delete duplicate copies (journaled, undoable)."
 msgstr ""
 
+msgid "B"
+msgstr ""
+
 msgid "Broken"
 msgstr ""
 
 msgid "Broken files"
+msgstr ""
+
+msgid "Broken files (empty or unreadable)"
 msgstr ""
 
 #, python-brace-format
@@ -98,9 +107,6 @@ msgstr ""
 msgid "Configured folder {path} is not mounted: it is ignored."
 msgstr ""
 
-msgid "Copies that can be deleted"
-msgstr ""
-
 msgid "Date"
 msgstr ""
 
@@ -130,6 +136,14 @@ msgstr ""
 msgid "Duplicates"
 msgstr ""
 
+msgid "Duration"
+msgstr ""
+
+msgid ""
+"Each copy is compared again with the kept one before deletion; unreadable"
+" files go to the quarantine."
+msgstr ""
+
 #, python-brace-format
 msgid "Edit {path} to change these settings; command-line options win."
 msgstr ""
@@ -150,8 +164,7 @@ msgid ""
 "no server needed."
 msgstr ""
 
-#, python-brace-format
-msgid "Example: {example}"
+msgid "Extra copies that can be deleted"
 msgstr ""
 
 msgid "Failed"
@@ -177,6 +190,11 @@ msgstr ""
 msgid "Find exact duplicates and broken files. Read-only: mount folders with :ro."
 msgstr ""
 
+msgid ""
+"Finds broken files: empty (0 bytes), images that cannot be decoded, "
+"videos that cannot be opened."
+msgstr ""
+
 msgid "Folder"
 msgstr ""
 
@@ -184,6 +202,9 @@ msgid "Folder never analysed, e.g. a real backup to keep. Repeatable."
 msgstr ""
 
 msgid "Folder never modified; its files are the copies kept. Repeatable."
+msgstr ""
+
+msgid "Folder on your computer"
 msgstr ""
 
 msgid "Folder pairs"
@@ -204,6 +225,12 @@ msgstr ""
 msgid "Freed"
 msgstr ""
 
+msgid "Full commands (reports, journal, WSL): see README.md."
+msgstr ""
+
+msgid "GB"
+msgstr ""
+
 #, python-brace-format
 msgid "HTML report: {path}"
 msgstr ""
@@ -221,6 +248,9 @@ msgstr ""
 msgid "Invalid configuration ({details})."
 msgstr ""
 
+msgid "KB"
+msgstr ""
+
 msgid "Kept in"
 msgstr ""
 
@@ -232,6 +262,12 @@ msgid "List the HTML reports of previous audits and cleans."
 msgstr ""
 
 msgid "List the clean runs and what they did."
+msgstr ""
+
+msgid "Listing media files"
+msgstr ""
+
+msgid "MB"
 msgstr ""
 
 msgid "Media files scanned"
@@ -296,6 +332,21 @@ msgstr ""
 msgid "Nothing was changed."
 msgstr ""
 
+#, python-brace-format
+msgid ""
+"Only analyse files with these extensions, e.g. --ext png,webp "
+"(repeatable). Default: every supported extension: {extensions}."
+msgstr ""
+
+msgid ""
+"Only files of the same size can be identical: their first and last 64 KB "
+"rule most of them out quickly."
+msgstr ""
+
+#, python-brace-format
+msgid "Only these extensions are analysed: {extensions}."
+msgstr ""
+
 msgid "Open index.html in the folder mounted on /reports: it lists every report."
 msgstr ""
 
@@ -303,9 +354,6 @@ msgid "Origin"
 msgstr ""
 
 msgid "Output (override general.* of config.toml)"
-msgstr ""
-
-msgid "Path"
 msgstr ""
 
 #, python-brace-format
@@ -325,7 +373,17 @@ msgstr ""
 msgid "Quarantined"
 msgstr ""
 
+msgid ""
+"Reads the remaining candidates in full: same SHA-256 means identical, "
+"byte for byte."
+msgstr ""
+
 msgid "Reason"
+msgstr ""
+
+msgid ""
+"Rebuilds each deleted copy from the kept one, and brings quarantined "
+"files back."
 msgstr ""
 
 msgid "Remove ':ro' from their -v options to let 'clean' act."
@@ -369,6 +427,9 @@ msgstr ""
 msgid "Run {run_id} has no quarantine."
 msgstr ""
 
+msgid "Scan (override scan.* of config.toml)"
+msgstr ""
+
 msgid "Setting"
 msgstr ""
 
@@ -393,8 +454,14 @@ msgstr ""
 msgid "State"
 msgstr ""
 
+msgid "TB"
+msgstr ""
+
 #, python-brace-format
 msgid "The configuration file {path} is not valid TOML: {error}"
+msgstr ""
+
+msgid "The current folder (PowerShell, or bash on WSL, Linux, macOS):"
 msgstr ""
 
 msgid "The quarantine is empty."
@@ -407,6 +474,12 @@ msgstr ""
 
 #, python-brace-format
 msgid "These folders are mounted read-only: {folders}."
+msgstr ""
+
+msgid ""
+"To keep settings, mount a folder of yours on /config, e.g. -v \"$HOME"
+"\\media-dedup\\config:/config\": config.toml is created there, commented,"
+" on the first run; edit it with any text editor."
 msgstr ""
 
 msgid "Type"
@@ -424,6 +497,11 @@ msgid "Value"
 msgstr ""
 
 msgid "Video cannot be opened"
+msgstr ""
+
+msgid ""
+"Walks through every folder; photos and videos are recognised by their "
+"extension."
 msgstr ""
 
 msgid "When to use colours (NO_COLOR is honoured too)."
@@ -447,7 +525,14 @@ msgstr ""
 msgid "[yellow]not mounted[/] — nothing kept after the run"
 msgstr ""
 
+msgid "[yellow]not mounted[/] — nothing to analyse"
+msgstr ""
+
 msgid "a file changed since the audit"
+msgstr ""
+
+#, python-brace-format
+msgid "about {time} left"
 msgstr ""
 
 msgid "audit"
@@ -473,6 +558,10 @@ msgstr ""
 
 #, python-format
 msgid "duplicate copies in %(groups)s groups"
+msgstr ""
+
+#, python-brace-format
+msgid "elapsed {time}"
 msgstr ""
 
 msgid "en"
@@ -533,6 +622,26 @@ msgstr ""
 
 msgid "yes"
 msgstr ""
+
+#, python-brace-format
+msgid ""
+"{count} file is both in {kept} (kept) and in {removed} (deleted), {size} "
+"freed."
+msgid_plural ""
+"{count} files are both in {kept} (kept) and in {removed} (deleted), "
+"{size} freed."
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid ""
+"{count} file is present several times in {kept}: one copy is kept ({size}"
+" freed)."
+msgid_plural ""
+"{count} files are present several times in {kept}: one copy of each is "
+"kept ({size} freed)."
+msgstr[0] ""
+msgstr[1] ""
 
 #, python-brace-format
 msgid "{count} report deleted."

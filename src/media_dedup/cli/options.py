@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, cast
 
 import typer
 
+from media_dedup.config.settings import supported_extensions
 from media_dedup.i18n import _
 
 if TYPE_CHECKING:
@@ -16,6 +17,10 @@ if TYPE_CHECKING:
 
 def _panel_folders() -> str:
     return _("Folders (override folders.* of config.toml)")
+
+
+def _panel_scan() -> str:
+    return _("Scan (override scan.* of config.toml)")
 
 
 def _panel_output() -> str:
@@ -139,6 +144,26 @@ def exclude() -> OptionInfo:
             "--exclude",
             help=_("Folder never analysed, e.g. a real backup to keep. Repeatable."),
             rich_help_panel=_panel_folders(),
+            show_default=False,
+        ),
+    )
+
+
+def extensions() -> OptionInfo:
+    """`--ext`: only analyse some extensions (repeatable or comma-separated).
+
+    Returns:
+        The option definition.
+    """
+    return cast(
+        "OptionInfo",
+        typer.Option(
+            "--ext",
+            help=_(
+                "Only analyse files with these extensions, e.g. --ext png,webp "
+                "(repeatable). Default: every supported extension: {extensions}."
+            ).format(extensions=supported_extensions()),
+            rich_help_panel=_panel_scan(),
             show_default=False,
         ),
     )

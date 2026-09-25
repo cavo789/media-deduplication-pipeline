@@ -13,6 +13,7 @@ from media_dedup.actions.outcome import Incident, Outcome, Tally
 from media_dedup.constants import ActionKind, Phase, Status
 from media_dedup.i18n import _
 from media_dedup.scan.hashing import full_digest
+from media_dedup.scan.progress import Step
 
 if TYPE_CHECKING:
     from media_dedup.actions.journal import JournalEntry, JournalWriter
@@ -54,7 +55,14 @@ class UndoExecutor:
             for seq, entry in sorted(latest_states(entries, Phase.CLEAN).items())
             if seq not in restored
         ]
-        self._progress.start(_("Restoring"), len(todo))
+        step = Step(
+            _("Restoring"),
+            _(
+                "Rebuilds each deleted copy from the kept one, and brings quarantined "
+                "files back."
+            ),
+        )
+        self._progress.start(step, len(todo))
         for entry in reversed(todo):
             try:
                 self._restore(entry)

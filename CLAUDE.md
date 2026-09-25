@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project
 
 `media-dedup` finds and safely cleans duplicate photos and videos across folders and disks. It
-ships as a Docker image (`docker build --tag media-dedup .`, `ENTRYPOINT ["media-dedup"]`) run
+ships as a Docker image published on Docker Hub as `cavo789/media-dedup` (helper `push`; local
+build: `docker build --tag media-dedup .`, `ENTRYPOINT ["media-dedup"]`) run
 from PowerShell or WSL. User documentation: [README.md](README.md) (English) and
 [README_FR.md](README_FR.md) (French) — **update both with every user-facing change**.
 
@@ -50,7 +51,8 @@ e2e                   # build media-dedup:latest, then pytest -m e2e (real docke
 dedup <command>       # run the CLI from sources against /tmp/media-dedup/*
 demo                  # sample tree in /tmp/media-dedup/data, then audit
 reports / reports_stop  # serve /tmp/media-dedup/reports on an OS-chosen port
-image / dive / dive_ci  # build, inspect, gate the image layers
+build / dive / dive_ci  # build media-dedup:latest, inspect, gate the image layers
+push                  # build, then publish cavo789/media-dedup:latest + :<version> to Docker Hub
 i18n_update           # after changing any _() string: extract + merge, then translate the .po
 ```
 

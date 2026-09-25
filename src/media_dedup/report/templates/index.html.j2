@@ -10,10 +10,10 @@
   <tr>
     <td><a href="{{ s.folder }}/report.html">{{ s.created_at.strftime("%Y-%m-%d %H:%M") }}</a></td>
     <td>{{ _("clean") if s.kind.value == "clean" else _("audit") }}</td>
-    <td class="num">{{ s.files_scanned }}</td>
-    <td class="num">{{ s.duplicate_files }}</td>
+    <td class="num">{{ s.files_scanned | number }}</td>
+    <td class="num">{{ s.duplicate_files | number }}</td>
     <td class="num">{% if s.kind.value == "clean" %}{{ s.freed_bytes | size }} {{ _("freed") }}{% else %}{{ s.reclaimable_bytes | size }}{% endif %}</td>
-    <td class="num">{{ s.broken_files }}</td>
+    <td class="num">{{ s.broken_files | number }}</td>
   </tr>
   {% endfor %}
 </table>

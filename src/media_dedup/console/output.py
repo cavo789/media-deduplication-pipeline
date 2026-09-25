@@ -97,6 +97,10 @@ class Output:
         """
         self.console.print(renderable)
 
+    def blank(self) -> None:
+        """Print an empty line, to let the sections breathe."""
+        self.console.line()
+
     def confirm(self, question: str) -> bool:
         """Ask a yes/no question; anything but an explicit yes means no.
 

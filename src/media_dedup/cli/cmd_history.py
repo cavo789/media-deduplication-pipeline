@@ -7,7 +7,7 @@ from rich.table import Table
 
 from media_dedup.actions.runs import list_run_ids, summarize
 from media_dedup.cli.context import runtime_of, user_errors
-from media_dedup.console.formatting import human_size
+from media_dedup.console.formatting import human_number, human_size
 from media_dedup.errors import MountError
 from media_dedup.i18n import _
 from media_dedup.paths.mount_kind import MountKind
@@ -41,10 +41,10 @@ def history_command(ctx: typer.Context) -> None:
     for run in summaries:
         table.add_row(
             run.run_id,
-            str(run.deleted),
+            human_number(run.deleted),
             human_size(run.freed),
-            str(run.quarantined),
-            str(run.restored),
+            human_number(run.quarantined),
+            human_number(run.restored),
         )
     output.show(table)
     output.tip(_("'media-dedup undo <run>' restores the files of a run."))

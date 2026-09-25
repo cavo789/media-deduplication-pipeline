@@ -36,7 +36,8 @@ export -f _media_dedup_env
 export -f check
 export -f format
 export -f tests
-export -f image
+export -f build
+export -f push
 export -f dive
 export -f dive_ci
 export -f e2e
