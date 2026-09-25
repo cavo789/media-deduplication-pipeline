@@ -1,0 +1,51 @@
+{# Rendered once, in the active language, when config.toml does not exist yet. #}
+{% macro comment(text, cli="") -%}
+# {{ text | wordwrap(86, break_long_words=False, wrapstring="\n# ") }}
+{%- if cli %}
+
+# CLI: {{ cli }}
+{%- endif %}
+{%- endmacro %}
+{{ comment(_("media-dedup configuration — created on first run, edit it freely.")) }}
+#
+{{ comment(_("Precedence, from the strongest: command-line options > MEDIA_DEDUP_* environment variables (e.g. MEDIA_DEDUP_GENERAL__LOCALE=fr) > this file > built-in defaults.")) }}
+{{ comment(_("Run 'media-dedup config' to see every effective value and where it comes from.")) }}
+
+
+[general]
+{{ comment(_('Interface language: "en" or "fr".'), "--locale") }}
+locale = "{{ locale }}"
+
+{{ comment(_('How much to log: "error", "warning", "info" or "debug".'), "--verbosity") }}
+verbosity = "info"
+
+{{ comment(_('ANSI colours: "auto", "always" or "never".'), "--color") }}
+color = "auto"
+
+
+[folders]
+{{ comment(_("Host paths, written between 'single quotes' so backslashes need no escaping. These are lists of paths: your real folders are never renamed.")) }}
+
+{{ comment(_("Copies found in these folders are kept first, in this order."), "--prefer") }}
+preferred = []
+
+{{ comment(_('Never modified. Their files are always the copies kept, so identical files elsewhere ARE deleted (a "master library").'), "--protect") }}
+protected = []
+
+{{ comment(_("Never analysed: e.g. a real backup that must remain a second copy."), "--exclude") }}
+excluded = []
+
+{{ comment(_("Example:")) }}
+# preferred = ['C:\Family Photos', 'C:\Users\Public\Pictures']
+# protected = ['C:\Family Photos\Albums']
+# excluded = ['D:\backup']
+
+
+[scan]
+{{ comment(_('Only analyse these extensions, e.g. ["png", "webp"]. Empty: every supported one (media-dedup audit --help lists them).'), "--ext") }}
+extensions = []
+
+
+[clean]
+{{ comment(_("Ask for confirmation before cleaning."), "--yes") }}
+confirm = true

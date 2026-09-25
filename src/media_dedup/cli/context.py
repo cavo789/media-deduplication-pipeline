@@ -63,11 +63,11 @@ def build_runtime(cli_layer: Layer) -> Runtime:
     configure_logging(general.verbosity, output.console)
     runtime = Runtime(loaded, locations, MountTable.current(), output, cli_layer)
     if runtime.persistent(MountKind.CONFIG) and write_default_config(
-        locations.config_file
+        locations.config_file, general.locale
     ):
         output.tip(
             _("A commented configuration file was created: {path}.").format(
-                path=locations.config_file,
+                path=runtime.mapper.to_host(locations.config_file),
             ),
         )
     return runtime

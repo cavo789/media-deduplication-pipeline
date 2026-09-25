@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from jinja2 import Environment, PackageLoader, select_autoescape
+from typing import TYPE_CHECKING
 
 from media_dedup.console.formatting import human_number, human_size
-from media_dedup.i18n import active
+from media_dedup.i18n.templates import translated_environment
+
+if TYPE_CHECKING:
+    from jinja2 import Environment
 
 _TEMPLATES_PACKAGE = "media_dedup.report"
 
@@ -16,19 +19,7 @@ def make_environment() -> Environment:
     Returns:
         The Jinja environment.
     """
-    environment = Environment(
-        loader=PackageLoader(_TEMPLATES_PACKAGE, "templates"),
-        autoescape=select_autoescape(enabled_extensions=("html", "j2")),
-        extensions=["jinja2.ext.i18n"],
-        trim_blocks=True,
-        lstrip_blocks=True,
-        keep_trailing_newline=True,
-    )
-    # pylint: disable-next=no-member
-    environment.install_gettext_translations(  # type: ignore[attr-defined]
-        active(),
-        newstyle=True,
-    )
+    environment = translated_environment(_TEMPLATES_PACKAGE, escaped=("html", "j2"))
     environment.filters["size"] = human_size
     environment.filters["number"] = human_number
     return environment

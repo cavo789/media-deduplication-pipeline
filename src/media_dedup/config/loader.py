@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from enum import StrEnum
-from importlib.resources import files
 from typing import TYPE_CHECKING
 
 from pydantic import ValidationError
@@ -19,14 +18,16 @@ from media_dedup.config.layers import (
 from media_dedup.config.settings import Settings
 from media_dedup.errors import ConfigError
 from media_dedup.i18n import _
+from media_dedup.i18n.templates import translated_environment
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from media_dedup.constants import Locale
     from media_dedup.paths.locations import Locations
 
 _TEMPLATE_PACKAGE = "media_dedup.config"
-_TEMPLATE_PATH = ("templates", "config.toml")
+_TEMPLATE_NAME = "config.toml.j2"
 
 
 class Origin(StrEnum):
@@ -95,17 +96,22 @@ def load_settings(locations: Locations, cli: Layer | None = None) -> LoadedSetti
     return LoadedSettings(settings, layers)
 
 
-def write_default_config(config_file: Path) -> bool:
+def write_default_config(config_file: Path, locale: Locale) -> bool:
     """Create a commented `config.toml` when none exists yet.
+
+    The comments are written in the active language, and `general.locale` is set to
+    `locale`: a file created with `--locale fr` keeps the next runs in French.
 
     Args:
         config_file: Where the configuration file belongs.
+        locale: The language of this run, stored in the file.
 
     Returns:
         True when the file was created.
     """
     if config_file.exists() or not config_file.parent.is_dir():
         return False
-    template = files(_TEMPLATE_PACKAGE).joinpath(*_TEMPLATE_PATH)
-    config_file.write_text(template.read_text(encoding="utf-8"), encoding="utf-8")
+    environment = translated_environment(_TEMPLATE_PACKAGE, escaped=())
+    text = environment.get_template(_TEMPLATE_NAME).render(locale=locale.value)
+    config_file.write_text(text, encoding="utf-8")
     return True

@@ -11,6 +11,9 @@ msgstr ""
 msgid "A commented configuration file was created: {path}."
 msgstr ""
 
+msgid "ANSI colours: \"auto\", \"always\" or \"never\"."
+msgstr ""
+
 msgid "Act"
 msgstr ""
 
@@ -36,6 +39,9 @@ msgid ""
 msgstr ""
 
 msgid "Analyse"
+msgstr ""
+
+msgid "Ask for confirmation before cleaning."
 msgstr ""
 
 msgid "Audit"
@@ -107,6 +113,9 @@ msgstr ""
 msgid "Configured folder {path} is not mounted: it is ignored."
 msgstr ""
 
+msgid "Copies found in these folders are kept first, in this order."
+msgstr ""
+
 msgid "Date"
 msgstr ""
 
@@ -162,6 +171,9 @@ msgstr ""
 msgid ""
 "Every audit and clean, newest first. Open this page with a double-click: "
 "no server needed."
+msgstr ""
+
+msgid "Example:"
 msgstr ""
 
 msgid "Extra copies that can be deleted"
@@ -235,13 +247,24 @@ msgstr ""
 msgid "HTML report: {path}"
 msgstr ""
 
+msgid ""
+"Host paths, written between 'single quotes' so backslashes need no "
+"escaping. These are lists of paths: your real folders are never renamed."
+msgstr ""
+
 msgid "How much to log."
+msgstr ""
+
+msgid "How much to log: \"error\", \"warning\", \"info\" or \"debug\"."
 msgstr ""
 
 msgid "Image cannot be decoded"
 msgstr ""
 
 msgid "Interface language."
+msgstr ""
+
+msgid "Interface language: \"en\" or \"fr\"."
 msgstr ""
 
 #, python-brace-format
@@ -294,6 +317,14 @@ msgstr ""
 msgid "Moved to the quarantine"
 msgstr ""
 
+msgid "Never analysed: e.g. a real backup that must remain a second copy."
+msgstr ""
+
+msgid ""
+"Never modified. Their files are always the copies kept, so identical "
+"files elsewhere ARE deleted (a \"master library\")."
+msgstr ""
+
 msgid "No clean run found in the journal."
 msgstr ""
 
@@ -339,6 +370,11 @@ msgid ""
 msgstr ""
 
 msgid ""
+"Only analyse these extensions, e.g. [\"png\", \"webp\"]. Empty: every "
+"supported one (media-dedup audit --help lists them)."
+msgstr ""
+
+msgid ""
 "Only files of the same size can be identical: their first and last 64 KB "
 "rule most of them out quickly."
 msgstr ""
@@ -361,6 +397,12 @@ msgid "Permanently delete the quarantine of {runs} ({size})?"
 msgstr ""
 
 msgid "Permanently delete the quarantined broken files of a run."
+msgstr ""
+
+msgid ""
+"Precedence, from the strongest: command-line options > MEDIA_DEDUP_* "
+"environment variables (e.g. MEDIA_DEDUP_GENERAL__LOCALE=fr) > this file >"
+" built-in defaults."
 msgstr ""
 
 msgid "Proving identity (full SHA-256)"
@@ -406,6 +448,11 @@ msgstr ""
 
 #, python-brace-format
 msgid "Run 'clean' (same -v options, without :ro) to free {size}."
+msgstr ""
+
+msgid ""
+"Run 'media-dedup config' to see every effective value and where it comes "
+"from."
 msgstr ""
 
 msgid "Run 'media-dedup config' to see every setting and where it comes from."
@@ -584,6 +631,9 @@ msgid "kept"
 msgstr ""
 
 msgid "media files scanned"
+msgstr ""
+
+msgid "media-dedup configuration — created on first run, edit it freely."
 msgstr ""
 
 msgid "media-dedup report"

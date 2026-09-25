@@ -7,9 +7,10 @@ from typing import TYPE_CHECKING
 import pytest
 
 from media_dedup.config.loader import Origin, load_settings, write_default_config
-from media_dedup.config.settings import Settings
+from media_dedup.config.settings import GeneralSettings, Settings
 from media_dedup.constants import ColorMode, Locale, Verbosity
 from media_dedup.errors import ConfigError
+from media_dedup.i18n import install
 
 if TYPE_CHECKING:
     from media_dedup.paths.locations import Locations
@@ -89,9 +90,22 @@ def test_invalid_value_names_the_key(locations: Locations) -> None:
 
 def test_default_template_is_written_once_and_valid(locations: Locations) -> None:
     """The commented template matches the defaults and is never overwritten."""
-    assert write_default_config(locations.config_file)
+    assert write_default_config(locations.config_file, Locale.EN)
     assert load_settings(locations).settings == Settings()
-    assert not write_default_config(locations.config_file)
+    assert not write_default_config(locations.config_file, Locale.FR)
+    assert all(
+        len(line) <= 88 for line in locations.config_file.read_text().splitlines()
+    )
+
+
+def test_french_template_keeps_the_next_runs_in_french(locations: Locations) -> None:
+    """Created in French: French comments, and `locale = "fr"` for the next runs."""
+    install(Locale.FR)
+    assert write_default_config(locations.config_file, Locale.FR)
+    text = locations.config_file.read_text()
+    assert "Langue de l'interface" in text
+    settings = load_settings(locations).settings
+    assert settings == Settings(general=GeneralSettings(locale=Locale.FR))
 
 
 def test_escaped_backspace_in_a_path_is_refused(locations: Locations) -> None:

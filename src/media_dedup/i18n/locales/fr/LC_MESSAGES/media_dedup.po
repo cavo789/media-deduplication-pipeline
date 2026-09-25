@@ -27,6 +27,9 @@ msgstr "Un dossier Windows (PowerShell) :"
 msgid "A commented configuration file was created: {path}."
 msgstr "Un fichier de configuration commenté a été créé : {path}."
 
+msgid "ANSI colours: \"auto\", \"always\" or \"never\"."
+msgstr "Couleurs ANSI : \"auto\", \"always\" ou \"never\"."
+
 msgid "Act"
 msgstr "Agir"
 
@@ -60,6 +63,9 @@ msgstr ""
 
 msgid "Analyse"
 msgstr "Analyser"
+
+msgid "Ask for confirmation before cleaning."
+msgstr "Demander confirmation avant de nettoyer."
 
 msgid "Audit"
 msgstr "Audit"
@@ -134,6 +140,11 @@ msgstr "Comparaison des fichiers de même taille"
 msgid "Configured folder {path} is not mounted: it is ignored."
 msgstr "Le dossier configuré {path} n'est pas monté : il est ignoré."
 
+msgid "Copies found in these folders are kept first, in this order."
+msgstr ""
+"Les copies trouvées dans ces dossiers sont gardées en priorité, dans cet "
+"ordre."
+
 msgid "Date"
 msgstr "Date"
 
@@ -200,6 +211,9 @@ msgid ""
 msgstr ""
 "Chaque audit et nettoyage, du plus récent au plus ancien. Ouvrez cette "
 "page d'un double-clic : aucun serveur nécessaire."
+
+msgid "Example:"
+msgstr "Exemple :"
 
 msgid "Extra copies that can be deleted"
 msgstr "Copies en trop, supprimables"
@@ -283,14 +297,28 @@ msgstr "Go"
 msgid "HTML report: {path}"
 msgstr "Rapport HTML : {path}"
 
+msgid ""
+"Host paths, written between 'single quotes' so backslashes need no "
+"escaping. These are lists of paths: your real folders are never renamed."
+msgstr ""
+"Chemins de votre ordinateur, écrits entre 'apostrophes' pour que les "
+"barres obliques inverses n'aient pas besoin d'être doublées. Ce sont des "
+"listes de chemins : vos vrais dossiers ne sont jamais renommés."
+
 msgid "How much to log."
 msgstr "Niveau de détail des journaux."
+
+msgid "How much to log: \"error\", \"warning\", \"info\" or \"debug\"."
+msgstr "Quantité de messages : \"error\", \"warning\", \"info\" ou \"debug\"."
 
 msgid "Image cannot be decoded"
 msgstr "Image impossible à décoder"
 
 msgid "Interface language."
 msgstr "Langue de l'interface."
+
+msgid "Interface language: \"en\" or \"fr\"."
+msgstr "Langue de l'interface : \"en\" ou \"fr\"."
 
 #, python-brace-format
 msgid "Invalid configuration ({details})."
@@ -346,6 +374,19 @@ msgstr "Montez vos dossiers, p. ex. -v \"C:\\Photos:/data/c/Photos:ro\"."
 msgid "Moved to the quarantine"
 msgstr "Déplacés en quarantaine"
 
+msgid "Never analysed: e.g. a real backup that must remain a second copy."
+msgstr ""
+"Jamais analysés : p. ex. une vraie sauvegarde qui doit rester une seconde"
+" copie."
+
+msgid ""
+"Never modified. Their files are always the copies kept, so identical "
+"files elsewhere ARE deleted (a \"master library\")."
+msgstr ""
+"Jamais modifiés. Leurs fichiers sont toujours les copies gardées : les "
+"fichiers identiques ailleurs SONT donc supprimés (une « bibliothèque de "
+"référence »)."
+
 msgid "No clean run found in the journal."
 msgstr "Aucun nettoyage trouvé dans le journal."
 
@@ -396,6 +437,13 @@ msgstr ""
 "{extensions}."
 
 msgid ""
+"Only analyse these extensions, e.g. [\"png\", \"webp\"]. Empty: every "
+"supported one (media-dedup audit --help lists them)."
+msgstr ""
+"N'analyser que ces extensions, p. ex. [\"png\", \"webp\"]. Vide : toutes "
+"celles prises en charge (media-dedup audit --help les liste)."
+
+msgid ""
 "Only files of the same size can be identical: their first and last 64 KB "
 "rule most of them out quickly."
 msgstr ""
@@ -425,6 +473,15 @@ msgid "Permanently delete the quarantined broken files of a run."
 msgstr ""
 "Supprime définitivement les fichiers cassés mis en quarantaine par une "
 "exécution."
+
+msgid ""
+"Precedence, from the strongest: command-line options > MEDIA_DEDUP_* "
+"environment variables (e.g. MEDIA_DEDUP_GENERAL__LOCALE=fr) > this file >"
+" built-in defaults."
+msgstr ""
+"Priorité, de la plus forte à la plus faible : options de ligne de "
+"commande > variables d'environnement MEDIA_DEDUP_* (p. ex. "
+"MEDIA_DEDUP_GENERAL__LOCALE=fr) > ce fichier > valeurs par défaut."
 
 msgid "Proving identity (full SHA-256)"
 msgstr "Preuve d'identité (SHA-256 complet)"
@@ -476,6 +533,13 @@ msgstr "Exécution"
 #, python-brace-format
 msgid "Run 'clean' (same -v options, without :ro) to free {size}."
 msgstr "Lancez 'clean' (mêmes options -v, sans :ro) pour libérer {size}."
+
+msgid ""
+"Run 'media-dedup config' to see every effective value and where it comes "
+"from."
+msgstr ""
+"Lancez 'media-dedup config' pour voir chaque valeur effective et son "
+"origine."
 
 msgid "Run 'media-dedup config' to see every setting and where it comes from."
 msgstr "Lancez 'media-dedup config' pour voir chaque réglage et son origine."
@@ -664,6 +728,11 @@ msgstr "conservée"
 
 msgid "media files scanned"
 msgstr "fichiers média analysés"
+
+msgid "media-dedup configuration — created on first run, edit it freely."
+msgstr ""
+"Configuration de media-dedup — créée au premier lancement, modifiez-la "
+"librement."
 
 msgid "media-dedup report"
 msgstr "Rapport media-dedup"

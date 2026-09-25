@@ -251,7 +251,10 @@ docker run --rm -it -v "$HOME\media-dedup\config:/config" cavo789/media-dedup co
 ```
 
 On this first run, a commented `config.toml` appears in that folder: open
-`%USERPROFILE%\media-dedup\config\config.toml` with any text editor. Keep the same
+`%USERPROFILE%\media-dedup\config\config.toml` with any text editor. Its comments are written
+in the language of that run, and that language is saved in it: created with `--locale fr`, the
+file is commented in French and holds `locale = "fr"`, so the next runs speak French without
+`--locale`. The file is never overwritten; delete it to get a fresh one. Keep the same
 `-v …:/config` in every command so the tool reads it. `media-dedup config` shows each setting
 and where it comes from, and the folder of your computer behind each mount point.
 
