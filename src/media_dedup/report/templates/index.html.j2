@@ -1,0 +1,23 @@
+{% extends "base.html.j2" %}
+{% block title %}{{ _("media-dedup reports") }}{% endblock %}
+{% block content %}
+<h1>🧹 {{ _("media-dedup reports") }}</h1>
+<p class="muted">{{ _("Every audit and clean, newest first. Open this page with a double-click: no server needed.") }}</p>
+{% if summaries %}
+<table>
+  <tr><th>{{ _("Date") }}</th><th>{{ _("Type") }}</th><th class="num">{{ _("Files") }}</th><th class="num">{{ _("Duplicates") }}</th><th class="num">{{ _("Space") }}</th><th class="num">{{ _("Broken") }}</th></tr>
+  {% for s in summaries %}
+  <tr>
+    <td><a href="{{ s.folder }}/report.html">{{ s.created_at.strftime("%Y-%m-%d %H:%M") }}</a></td>
+    <td>{{ _("clean") if s.kind.value == "clean" else _("audit") }}</td>
+    <td class="num">{{ s.files_scanned }}</td>
+    <td class="num">{{ s.duplicate_files }}</td>
+    <td class="num">{% if s.kind.value == "clean" %}{{ s.freed_bytes | size }} {{ _("freed") }}{% else %}{{ s.reclaimable_bytes | size }}{% endif %}</td>
+    <td class="num">{{ s.broken_files }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="note">{{ _("No report yet: run 'media-dedup audit'.") }}</p>
+{% endif %}
+{% endblock %}

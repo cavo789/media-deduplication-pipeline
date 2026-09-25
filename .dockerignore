@@ -1,0 +1,19 @@
+# Allowlist: the image needs only the package sources, the build manifest (and the README it
+# references) and the lockfile. Everything else — .git, .claude/, .todos/, .devcontainer/, tests/,
+# CLAUDE.md, ... — never enters the build context.
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+
+# Re-excluded inside the allowlisted tree: secrets and regenerated Python artefacts.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/id_rsa*
+**/id_ed25519*
+**/__pycache__/
+**/*.py[cod]
+**/.venv/

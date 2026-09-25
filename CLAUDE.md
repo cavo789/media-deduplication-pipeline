@@ -1,0 +1,84 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+`media-dedup` finds and safely cleans duplicate photos and videos across folders and disks. It
+ships as a Docker image (`docker build --tag media-dedup .`, `ENTRYPOINT ["media-dedup"]`) run
+from PowerShell or WSL. User documentation: [README.md](README.md) (English) and
+[README_FR.md](README_FR.md) (French) — **update both with every user-facing change**.
+
+Converse with the user in French; code, comments, docstrings and TODO files are in English.
+
+## Architecture (`src/media_dedup/`)
+
+Data flows `scan` → `plan` → `actions` → `report`, orchestrated by `services`, exposed by `cli`.
+
+| Package | Role |
+|---|---|
+| `cli/` | Typer commands (`audit`, `clean`, `undo`, `history`, `reports`, `purge`, `config`); thin: build a settings layer, call a service, display. `cli/app.py` builds the app **after** the locale is installed (`__main__.py`). |
+| `services/` | Use cases: `AuditService`, `CleanService`, `undo_run`, `write_report`; `Runtime` bundles settings, locations, mount table, output. |
+| `scan/` | `walker` (os.scandir), `exact` (size → partial SHA-256 → full SHA-256), `broken` (Pillow decode in a process pool, `ffprobe` for videos). Pure asyncio (`TaskGroup`, semaphore). |
+| `index/` | SQLite cache of digests/integrity keyed by (path, size, mtime) → incremental audits. |
+| `plan/` | `KeepPolicy` (protected > preferred > not a copy name > oldest > shortest path > alphabetical) and `build_plan`. |
+| `actions/` | Write-ahead JSONL journal (`pending` then `done`), `CleanExecutor` (byte compare before delete, verified quarantine move), `UndoExecutor` (rebuild from keeper / quarantine), purge, run history. |
+| `report/` | Self-contained Jinja2 HTML reports (+ previews, `summary.json`, `index.html`). |
+| `config/` | Frozen pydantic `Settings`; layers file (`config.toml`) < env (`MEDIA_DEDUP_<SECTION>__<KEY>`) < CLI. |
+| `paths/` | Mount points (`Locations`, each overridable by `MEDIA_DEDUP_<NAME>_DIR`), mount table, `/data/c/x` ↔ `C:\x` mapping. |
+| `i18n/` | gettext: `_()`/`ngettext()`, `.po` catalogs loaded at runtime with polib (no `.mo` in the repo). |
+| `console/` | Rich output facade (tips 💡), progress bars, tables, logging. |
+
+Mount points: `/data/<drive>/<path>` (folders to scan), `/config` (config.toml **only**),
+`/journal`, `/quarantine`, `/reports`, `/cache`. Never store other data under `/config`.
+
+Semantics to preserve: `protected` folders are never modified and always hold the kept copy (so
+identical files elsewhere are deleted); `excluded` folders are not analysed (a real backup).
+`clean` refuses to run without a persistent `/journal` or on `:ro` data mounts.
+
+## Commands (devcontainer helpers — never a Makefile)
+
+The devcontainer prints a cheatsheet in every terminal (`.devcontainer/scripts/interactive.sh`
++ `helpers/*.sh`, functions annotated `# @cat` / `# @cmd` / `# @desc`, exported in
+`interactive.sh`). Add new developer commands there.
+
+```bash
+check                 # pre-commit (ruff, mypy, pylint src+tests, shellcheck, shfmt, hadolint) + pytest --cov
+format                # ruff format + ruff check --fix
+tests [pytest args]   # e.g. tests tests/unit/test_keeper.py -k preferred
+e2e                   # build media-dedup:latest, then pytest -m e2e (real docker run)
+dedup <command>       # run the CLI from sources against /tmp/media-dedup/*
+demo                  # sample tree in /tmp/media-dedup/data, then audit
+reports / reports_stop  # serve /tmp/media-dedup/reports on an OS-chosen port
+image / dive / dive_ci  # build, inspect, gate the image layers
+i18n_update           # after changing any _() string: extract + merge, then translate the .po
+```
+
+Without the helpers: `uv run pytest`, `uv run mypy`, `uv run pylint src`,
+`pre-commit run --all-files --config .config/.pre-commit-config.yaml`.
+
+## Conventions (enforced by tooling — see `.claude/rules/python.md`)
+
+- Python 3.14, fully typed, mypy strict (+ extra error codes), ruff `select = ["ALL"]`, pylint 10/10.
+- **Max 200 lines per file, max 3 parameters per function** (frozen parameter object otherwise).
+  Only documented exception: Typer command functions in `cli/` (one parameter per CLI option).
+- Google docstrings everywhere; every CLI command and option has help text.
+- Every user-facing string goes through `_()`; run `i18n_update` and translate
+  `src/media_dedup/i18n/locales/fr/LC_MESSAGES/media_dedup.po` (a test checks completeness).
+- Long text (HTML, default `config.toml`) lives in `templates/` directories, never inline.
+- Zero junk in the repository: caches go to `/tmp` (env vars in `.devcontainer/Dockerfile`), the
+  venv is `/home/vscode/.venv`, hatchling (no egg-info). Tests write only to `tmp_path`.
+- Tests: `tests/unit`, `tests/integration` (real files, thread pool instead of process pool),
+  `tests/e2e` (marker `e2e`, skipped by default); coverage ≥ 90 % (branches).
+
+## Backlog and Claude tooling
+
+Follow-up work lives in `.todos/NNNN-slug.md` (IDs from `.claude/scripts/todo_next_id.sh`,
+header bullets Priority/Batch/Depends/Files — skill `todo-authoring`). `/todo NNNN` implements,
+`/todo-plan` regenerates `.todos/plan.md` (never edit it by hand). Reviews: `/python-review`,
+`/bash-review`, `/docker-review`, `/docker-dive-optimization`. These commands, skills, agents,
+rules and scripts are public and shared with the maintainer's other repositories.
+
+`.claude/memory/` (Claude's memory, linked by `.devcontainer/scripts/post-create.sh`) and
+`.claude/plans/` are **private**: git-ignored, kept on the host disk so they survive devcontainer
+rebuilds, never published. Everything else in `.claude/` is public — keep it free of personal data.

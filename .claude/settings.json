@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.claude/scripts/todo_lock.sh *)",
+      "Bash(.claude/scripts/todo_next_id.sh *)",
+      "Bash(.claude/scripts/todo_parse_backlog.sh *)",
+      "Bash(pre-commit run *)",
+      "Bash(pytest *)",
+      "Bash(ruff *)",
+      "Bash(mypy *)",
+      "Bash(pylint *)",
+      "Bash(uv run *)",
+      "Bash(uv sync *)"
+    ],
+    "additionalDirectories": [
+      "/tmp",
+      "/home/vscode/.claude/projects/-workspaces-media-deduplication-pipeline/memory",
+      "/workspaces/media-deduplication-pipeline/.claude/memory"
+    ]
+  }
+}

@@ -1,0 +1,550 @@
+msgid "'media-dedup undo <run>' restores the files of a run."
+msgstr ""
+
+msgid "'undo' can no longer restore these broken files."
+msgstr ""
+
+#, python-brace-format
+msgid "A commented configuration file was created: {path}."
+msgstr ""
+
+msgid "Act"
+msgstr ""
+
+msgid "Add -v \"<a folder of yours>:/journal\" to the docker run command."
+msgstr ""
+
+msgid "Add -v \"<a folder of yours>:/quarantine\" to handle them."
+msgstr ""
+
+msgid "Add -v \"<a folder of yours>:/reports\" to get HTML reports."
+msgstr ""
+
+msgid "Add -v media-dedup-cache:/cache: the next audits will be much faster."
+msgstr ""
+
+msgid "All reports"
+msgstr ""
+
+msgid ""
+"An audit never modifies anything. Every copy listed below is byte-for-"
+"byte identical to the one kept; 'clean' compares them again right before "
+"deleting."
+msgstr ""
+
+msgid "Analyse"
+msgstr ""
+
+msgid "Audit"
+msgstr ""
+
+msgid "Audit report"
+msgstr ""
+
+msgid "Audit summary"
+msgstr ""
+
+msgid "Audit, confirm, then really delete duplicate copies (journaled, undoable)."
+msgstr ""
+
+msgid "Broken"
+msgstr ""
+
+msgid "Broken files"
+msgstr ""
+
+#, python-brace-format
+msgid "Broken files are in /quarantine/{run_id}; 'purge' deletes them."
+msgstr ""
+
+msgid "Broken files in protected folders"
+msgstr ""
+
+msgid "Cannot ask for confirmation without an interactive terminal."
+msgstr ""
+
+#, python-brace-format
+msgid "Changed your mind? 'media-dedup undo {run_id}' restores everything."
+msgstr ""
+
+msgid "Checking that files can be read"
+msgstr ""
+
+msgid ""
+"Choose which folders keep their copies: folders.preferred in config.toml,"
+" or --prefer."
+msgstr ""
+
+msgid "Clean"
+msgstr ""
+
+msgid "Clean report"
+msgstr ""
+
+msgid "Clean runs (newest first)"
+msgstr ""
+
+#, python-brace-format
+msgid "Clean {run_id}"
+msgstr ""
+
+msgid "Cleaning"
+msgstr ""
+
+msgid "Comparing files of equal size"
+msgstr ""
+
+#, python-brace-format
+msgid "Configured folder {path} is not mounted: it is ignored."
+msgstr ""
+
+msgid "Copies that can be deleted"
+msgstr ""
+
+msgid "Date"
+msgstr ""
+
+msgid "Delete all reports but the N most recent ones."
+msgstr ""
+
+#, python-brace-format
+msgid "Delete {count} duplicate copies ({size}) and handle {broken} broken files?"
+msgstr ""
+
+msgid "Deleted"
+msgstr ""
+
+msgid "Deleted from"
+msgstr ""
+
+msgid "Do not ask for confirmation (overrides clean.confirm)."
+msgstr ""
+
+#, python-brace-format
+msgid "Double-click {name} in the folder mounted on /reports."
+msgstr ""
+
+msgid "Duplicate groups"
+msgstr ""
+
+msgid "Duplicates"
+msgstr ""
+
+#, python-brace-format
+msgid "Edit {path} to change these settings; command-line options win."
+msgstr ""
+
+msgid "Effective settings"
+msgstr ""
+
+msgid "Empty file (0 bytes)"
+msgstr ""
+
+msgid ""
+"Empty files are deleted; unreadable ones are moved to the quarantine, "
+"never deleted outright."
+msgstr ""
+
+msgid ""
+"Every audit and clean, newest first. Open this page with a double-click: "
+"no server needed."
+msgstr ""
+
+#, python-brace-format
+msgid "Example: {example}"
+msgstr ""
+
+msgid "Failed"
+msgstr ""
+
+msgid "File"
+msgstr ""
+
+msgid "Files"
+msgstr ""
+
+msgid "Files left untouched"
+msgstr ""
+
+msgid "Files processed"
+msgstr ""
+
+msgid ""
+"Find and safely clean duplicate photos and videos across folders and "
+"disks. Start with 'audit' (read-only), then 'clean'."
+msgstr ""
+
+msgid "Find exact duplicates and broken files. Read-only: mount folders with :ro."
+msgstr ""
+
+msgid "Folder"
+msgstr ""
+
+msgid "Folder never analysed, e.g. a real backup to keep. Repeatable."
+msgstr ""
+
+msgid "Folder never modified; its files are the copies kept. Repeatable."
+msgstr ""
+
+msgid "Folder pairs"
+msgstr ""
+
+msgid "Folder whose copies are kept first. Repeat it; the order matters."
+msgstr ""
+
+msgid "Folders (override folders.* of config.toml)"
+msgstr ""
+
+msgid "Folders analysed:"
+msgstr ""
+
+msgid "Folders sharing identical files"
+msgstr ""
+
+msgid "Freed"
+msgstr ""
+
+#, python-brace-format
+msgid "HTML report: {path}"
+msgstr ""
+
+msgid "How much to log."
+msgstr ""
+
+msgid "Image cannot be decoded"
+msgstr ""
+
+msgid "Interface language."
+msgstr ""
+
+#, python-brace-format
+msgid "Invalid configuration ({details})."
+msgstr ""
+
+msgid "Kept in"
+msgstr ""
+
+#, python-brace-format
+msgid "Line {number} of {path} is corrupt."
+msgstr ""
+
+msgid "List the HTML reports of previous audits and cleans."
+msgstr ""
+
+msgid "List the clean runs and what they did."
+msgstr ""
+
+msgid "Media files scanned"
+msgstr ""
+
+msgid "Mount"
+msgstr ""
+
+msgid "Mount points"
+msgstr ""
+
+msgid "Mount the journal folder used by clean: -v \"<folder>:/journal\"."
+msgstr ""
+
+msgid "Mount the reports folder: -v \"<folder>:/reports\"."
+msgstr ""
+
+msgid "Mount the same journal folder as for clean: -v \"<folder>:/journal\"."
+msgstr ""
+
+msgid "Mount your folders, e.g. -v \"C:\\Photos:/data/c/Photos:ro\"."
+msgstr ""
+
+msgid "Moved to the quarantine"
+msgstr ""
+
+msgid "No clean run found in the journal."
+msgstr ""
+
+msgid "No clean run yet."
+msgstr ""
+
+#, python-brace-format
+msgid "No folder to analyse under {path}."
+msgstr ""
+
+#, python-brace-format
+msgid "No journal found at {path}."
+msgstr ""
+
+msgid "No journal mount: no history to show."
+msgstr ""
+
+msgid "No journal mount: there is nothing to undo."
+msgstr ""
+
+msgid "No journal mount: without a journal, 'undo' would be impossible."
+msgstr ""
+
+msgid "No quarantine mount: unreadable files are left in place."
+msgstr ""
+
+msgid "No report yet: run 'media-dedup audit'."
+msgstr ""
+
+msgid "No reports mount: there is no report to list."
+msgstr ""
+
+msgid "Nothing to clean: no duplicate and no broken file."
+msgstr ""
+
+msgid "Nothing was changed."
+msgstr ""
+
+msgid "Open index.html in the folder mounted on /reports: it lists every report."
+msgstr ""
+
+msgid "Origin"
+msgstr ""
+
+msgid "Output (override general.* of config.toml)"
+msgstr ""
+
+msgid "Path"
+msgstr ""
+
+#, python-brace-format
+msgid "Permanently delete the quarantine of {runs} ({size})?"
+msgstr ""
+
+msgid "Permanently delete the quarantined broken files of a run."
+msgstr ""
+
+msgid "Proving identity (full SHA-256)"
+msgstr ""
+
+#, python-brace-format
+msgid "Quarantine purged: {size} freed."
+msgstr ""
+
+msgid "Quarantined"
+msgstr ""
+
+msgid "Reason"
+msgstr ""
+
+msgid "Remove ':ro' from their -v options to let 'clean' act."
+msgstr ""
+
+msgid "Reports (newest first)"
+msgstr ""
+
+msgid "Restore every file of a clean run, from the kept copy or the quarantine."
+msgstr ""
+
+msgid "Restored"
+msgstr ""
+
+msgid "Restoring"
+msgstr ""
+
+msgid "Run"
+msgstr ""
+
+#, python-brace-format
+msgid "Run 'clean' (same -v options, without :ro) to free {size}."
+msgstr ""
+
+msgid "Run 'media-dedup config' to see every setting and where it comes from."
+msgstr ""
+
+msgid "Run 'media-dedup history' to list the runs."
+msgstr ""
+
+msgid "Run docker with -it, or add --yes."
+msgstr ""
+
+msgid "Run to undo (see 'history'); the latest one by default."
+msgstr ""
+
+msgid "Run whose quarantine is deleted; every run by default."
+msgstr ""
+
+#, python-brace-format
+msgid "Run {run_id} has no quarantine."
+msgstr ""
+
+msgid "Setting"
+msgstr ""
+
+msgid "Show every setting, where it comes from, and the mount points."
+msgstr ""
+
+msgid "Show the version and exit."
+msgstr ""
+
+msgid "Size"
+msgstr ""
+
+msgid "Skipped (left untouched)"
+msgstr ""
+
+msgid "Space"
+msgstr ""
+
+msgid "Space that can be freed"
+msgstr ""
+
+msgid "State"
+msgstr ""
+
+#, python-brace-format
+msgid "The configuration file {path} is not valid TOML: {error}"
+msgstr ""
+
+msgid "The quarantine is empty."
+msgstr ""
+
+msgid ""
+"The quickest check: which folder keeps its copies, which folder loses "
+"them."
+msgstr ""
+
+#, python-brace-format
+msgid "These folders are mounted read-only: {folders}."
+msgstr ""
+
+msgid "Type"
+msgstr ""
+
+#, python-brace-format
+msgid "Undo {run_id}"
+msgstr ""
+
+#, python-brace-format
+msgid "Unknown run {run_id}."
+msgstr ""
+
+msgid "Value"
+msgstr ""
+
+msgid "Video cannot be opened"
+msgstr ""
+
+msgid "When to use colours (NO_COLOR is honoured too)."
+msgstr ""
+
+msgid "Will be deleted from"
+msgstr ""
+
+msgid "Windows paths must use 'single quotes' in TOML, e.g. 'C:\\Photos'."
+msgstr ""
+
+msgid "[cyan]read-only[/]"
+msgstr ""
+
+msgid "[green]mounted[/]"
+msgstr ""
+
+msgid "[y/N]"
+msgstr ""
+
+msgid "[yellow]not mounted[/] — nothing kept after the run"
+msgstr ""
+
+msgid "a file changed since the audit"
+msgstr ""
+
+msgid "audit"
+msgstr ""
+
+msgid "broken files"
+msgstr ""
+
+msgid "can be freed"
+msgstr ""
+
+msgid "clean"
+msgstr ""
+
+msgid "command line"
+msgstr ""
+
+msgid "config.toml"
+msgstr ""
+
+msgid "default"
+msgstr ""
+
+#, python-format
+msgid "duplicate copies in %(groups)s groups"
+msgstr ""
+
+msgid "en"
+msgstr ""
+
+msgid "environment"
+msgstr ""
+
+msgid "ffprobe not found: videos are not checked."
+msgstr ""
+
+msgid "freed"
+msgstr ""
+
+#, python-brace-format
+msgid "its copy {path} is gone"
+msgstr ""
+
+msgid "kept"
+msgstr ""
+
+msgid "media files scanned"
+msgstr ""
+
+msgid "media-dedup report"
+msgstr ""
+
+msgid "media-dedup reports"
+msgstr ""
+
+msgid "protected folder, kept"
+msgstr ""
+
+msgid "run"
+msgstr ""
+
+msgid "the file already exists"
+msgstr ""
+
+msgid "the file no longer exists"
+msgstr ""
+
+msgid "the files are no longer identical"
+msgstr ""
+
+#, python-brace-format
+msgid "the kept copy {path} no longer exists"
+msgstr ""
+
+msgid "the quarantine copy differs from the original"
+msgstr ""
+
+msgid "the restored copy does not match the original"
+msgstr ""
+
+msgid "y"
+msgstr ""
+
+msgid "yes"
+msgstr ""
+
+#, python-brace-format
+msgid "{count} report deleted."
+msgid_plural "{count} reports deleted."
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid "{name} must be a JSON array, e.g. [\"C:\\\\Photos\"]"
+msgstr ""
+
+#, python-format
+msgid "… and %(count)s more groups (largest files are shown first)."
+msgstr ""
+

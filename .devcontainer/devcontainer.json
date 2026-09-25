@@ -1,0 +1,75 @@
+{
+  "name": "media-dedup",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".",
+    "args": {
+      "USER_UID": "${localEnv:UID:1000}",
+      "USER_GID": "${localEnv:GID:1000}",
+      "TZ": "${localEnv:TZ:Etc/UTC}",
+      "APP_HOME": "/workspaces/${localWorkspaceFolderBasename}"
+    }
+  },
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false,
+      "installDockerBuildx": true
+    }
+  },
+  "mounts": [
+    "source=media-dedup-bashhistory,target=/home/vscode/.bash_history,type=volume",
+    "source=media-dedup-claude,target=/home/vscode/.claude,type=volume",
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly"
+  ],
+  "remoteUser": "vscode",
+  "updateRemoteUserUID": true,
+  "postCreateCommand": "bash .devcontainer/scripts/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "workbench.colorTheme": "Visual Studio Light",
+        "workbench.preferredLightColorTheme": "Visual Studio Light",
+        "workbench.preferredDarkColorTheme": "Visual Studio Light",
+        "workbench.startupEditor": "none",
+        "window.title": "${dirty}${rootName} ${separator} [DevContainer]",
+        "telemetry.telemetryLevel": "off",
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "icon": "terminal-bash"
+          }
+        },
+        "editor.formatOnSave": true,
+        "editor.rulers": [88],
+        "editor.renderWhitespace": "all",
+        "files.eol": "\n",
+        "files.insertFinalNewline": true,
+        "files.trimTrailingWhitespace": true,
+        "files.trimFinalNewlines": true,
+        "python.defaultInterpreterPath": "/home/vscode/.venv/bin/python",
+        "python.analysis.typeCheckingMode": "strict",
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false,
+        "mypy-type-checker.importStrategy": "fromEnvironment",
+        "ruff.importStrategy": "fromEnvironment",
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff",
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+          }
+        }
+      },
+      "extensions": [
+        "anthropic.claude-code",
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "usernamehw.errorlens"
+      ]
+    }
+  }
+}

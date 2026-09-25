@@ -1,0 +1,84 @@
+{% extends "base.html.j2" %}
+{% set s = report.summary %}
+{% set is_clean = s.kind.value == "clean" %}
+{% set reasons = {
+  "empty": _("Empty file (0 bytes)"),
+  "unreadable-image": _("Image cannot be decoded"),
+  "unreadable-video": _("Video cannot be opened"),
+} %}
+{% block title %}{{ _("media-dedup report") }} — {{ s.folder }}{% endblock %}
+{% block content %}
+<h1>🧹 {{ _("Clean report") if is_clean else _("Audit report") }}</h1>
+<p class="muted">{{ s.created_at.strftime("%Y-%m-%d %H:%M") }} UTC{% if s.run_id %} · {{ _("run") }} {{ s.run_id }}{% endif %}</p>
+<p>{{ _("Folders analysed:") }} {% for root in report.roots %}<code>{{ root }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+
+<div class="cards">
+  <div class="card"><div class="value">{{ s.files_scanned }}</div><div class="label">{{ _("media files scanned") }}</div></div>
+  <div class="card"><div class="value">{{ s.duplicate_files }}</div><div class="label">{{ _("duplicate copies in %(groups)s groups", groups=s.duplicate_groups) }}</div></div>
+  {% if is_clean %}
+  <div class="card"><div class="value">{{ s.freed_bytes | size }}</div><div class="label">{{ _("freed") }}</div></div>
+  {% else %}
+  <div class="card"><div class="value">{{ s.reclaimable_bytes | size }}</div><div class="label">{{ _("can be freed") }}</div></div>
+  {% endif %}
+  <div class="card"><div class="value">{{ s.broken_files }}</div><div class="label">{{ _("broken files") }}</div></div>
+</div>
+
+{% if not is_clean %}
+<p class="note">🔒 {{ _("An audit never modifies anything. Every copy listed below is byte-for-byte identical to the one kept; 'clean' compares them again right before deleting.") }}</p>
+{% endif %}
+
+{% if report.incidents.failed or report.incidents.skipped %}
+<h2>⚠️ {{ _("Files left untouched") }}</h2>
+<table>
+  <tr><th>{{ _("File") }}</th><th>{{ _("Reason") }}</th></tr>
+  {% for item in report.incidents.failed %}<tr><td>{{ item.path }}</td><td class="remove">{{ item.reason }}</td></tr>{% endfor %}
+  {% for item in report.incidents.skipped %}<tr><td>{{ item.path }}</td><td>{{ item.reason }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+
+{% if report.pairs %}
+<h2>📁 {{ _("Folder pairs") }}</h2>
+<p class="muted">{{ _("The quickest check: which folder keeps its copies, which folder loses them.") }}</p>
+<table>
+  <tr><th>{{ _("Kept in") }}</th><th>{{ _("Deleted from") if is_clean else _("Will be deleted from") }}</th><th class="num">{{ _("Files") }}</th><th class="num">{{ _("Size") }}</th></tr>
+  {% for pair in report.pairs %}
+  <tr><td>{{ pair.kept_in }}</td><td>{{ pair.removed_from }}</td><td class="num">{{ pair.files }}</td><td class="num">{{ pair.size | size }}</td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+{% if report.groups %}
+<h2>🧬 {{ _("Duplicate groups") }}</h2>
+{% for group in report.groups %}
+<div class="group">
+  <div class="thumb">{% if group.thumbnail %}<img src="{{ group.thumbnail }}" alt="" loading="lazy">{% else %}🎞️{% endif %}</div>
+  <ul class="files">
+    <li class="keep">✅ {{ group.keeper }} <span class="muted">· {{ group.size | size }} · {{ _("kept") }}</span></li>
+    {% for path in group.removable %}<li class="remove">🗑️ {{ path }}</li>{% endfor %}
+    {% for path in group.protected %}<li class="lock">🔒 {{ path }} <span class="muted">· {{ _("protected folder, kept") }}</span></li>{% endfor %}
+  </ul>
+</div>
+{% endfor %}
+{% if report.hidden_groups %}<p class="muted">{{ _("… and %(count)s more groups (largest files are shown first).", count=report.hidden_groups) }}</p>{% endif %}
+{% endif %}
+
+{% if report.broken.handled or report.broken.protected %}
+<h2>💔 {{ _("Broken files") }}</h2>
+<p class="muted">{{ _("Empty files are deleted; unreadable ones are moved to the quarantine, never deleted outright.") }}</p>
+{% for item in report.broken.handled + report.broken.protected %}
+<div class="group">
+  <div class="thumb">{% if item.thumbnail %}<img src="{{ item.thumbnail }}" alt="" loading="lazy">{% else %}❔{% endif %}</div>
+  <ul class="files">
+    <li>{{ item.path }}</li>
+    <li class="muted">{{ reasons[item.reason.value] }}{% if item.detail %} — {{ item.detail }}{% endif %}</li>
+    {% if item in report.broken.protected %}<li class="lock">🔒 {{ _("protected folder, kept") }}</li>{% endif %}
+  </ul>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if not report.groups and not report.broken.handled %}
+<p class="note">🎉 {{ _("Nothing to clean: no duplicate and no broken file.") }}</p>
+{% endif %}
+<p class="muted"><a href="../index.html">← {{ _("All reports") }}</a></p>
+{% endblock %}

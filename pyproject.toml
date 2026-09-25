@@ -1,0 +1,174 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "media-deduplication-pipeline"
+version = "0.1.0"
+description = "Find and safely clean duplicate photos and videos across folders and disks."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "jinja2>=3.1.6",
+    "pillow>=12.3.0",
+    "pillow-heif>=1.8.0",
+    "polib>=1.2.0",
+    "pydantic-settings>=2.15.0",
+    "rich>=15.0.0",
+    "typer>=0.27.2",
+]
+
+[project.scripts]
+media-dedup = "media_dedup.__main__:main"
+
+[dependency-groups]
+dev = [
+    "babel>=2.18.0",
+    "mypy>=2.3.1",
+    "pre-commit>=4.6.2",
+    "pylint>=4.0.9",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.9",
+    "shellcheck-py>=0.11.0.1",
+    "shfmt-py>=4.2.0",
+    "types-polib>=1.2.0.20260518",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/media_dedup"]
+
+# ---------------------------------------------------------------------------------------------
+# Ruff — every rule enabled; the few ignores are genuine conflicts, each justified.
+# ---------------------------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812", # Trailing commas are the formatter's job: the rule conflicts with `ruff format`.
+    "CPY001", # No per-file copyright header convention in this project.
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Typer builds each command from its signature: one parameter per CLI option, and the
+# annotations are resolved at runtime (so their imports must stay real imports).
+"src/media_dedup/cli/**" = ["PLR0913", "TC001", "TC002", "TC003"]
+"tests/**" = [
+    "S101",    # pytest is built on bare `assert`.
+    "PLR2004", # Expected values in assertions are the test's own documentation.
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.pylint]
+max-args = 3
+max-positional-args = 3
+
+[tool.ruff.lint.mccabe]
+max-complexity = 8
+
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.flake8-type-checking]
+# Pydantic and Typer read annotations at runtime: their types must stay real imports.
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "pydantic_settings.BaseSettings",
+]
+runtime-evaluated-decorators = ["typer.Typer.command", "typer.Typer.callback"]
+
+# ---------------------------------------------------------------------------------------------
+# Pylint — the file-size and parameter-count caps of this project live here.
+# ---------------------------------------------------------------------------------------------
+[tool.pylint.main]
+py-version = "3.14"
+load-plugins = [
+    "pylint.extensions.docparams",
+    "pylint.extensions.docstyle",
+    "pylint.extensions.mccabe",
+    "pylint.extensions.redefined_variable_type",
+    "pylint.extensions.typing",
+]
+jobs = 0
+
+[tool.pylint.format]
+max-line-length = 88
+max-module-lines = 200
+
+[tool.pylint.design]
+max-args = 3
+max-positional-arguments = 3
+max-complexity = 8
+
+[tool.pylint.parameter_documentation]
+accept-no-param-doc = false
+accept-no-raise-doc = false
+accept-no-return-doc = false
+accept-no-yields-doc = false
+default-docstring-type = "google"
+
+[tool.pylint."messages control"]
+enable = ["useless-suppression"]
+# One class = one responsibility (python-best-practices): a service or executor exposing a
+# single `run`/`find` method is the intended design, not a smell.
+disable = ["too-few-public-methods"]
+
+# ---------------------------------------------------------------------------------------------
+# Mypy — strict, plus every optional error code that catches real bugs.
+# ---------------------------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_unreachable = true
+mypy_path = "src"
+files = ["src", "tests"]
+plugins = ["pydantic.mypy"]
+enable_error_code = [
+    "deprecated",
+    "exhaustive-match",
+    "explicit-override",
+    "ignore-without-code",
+    "possibly-undefined",
+    "redundant-expr",
+    "redundant-self",
+    "truthy-bool",
+    "truthy-iterable",
+    "unused-awaitable",
+]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
+
+# ---------------------------------------------------------------------------------------------
+# Pytest & coverage — caches and data files are redirected to /tmp by the devcontainer.
+# ---------------------------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config", "-m", "not e2e"]
+markers = [
+    "e2e: end-to-end tests running the Docker image (need docker; run them with the e2e helper)",
+]
+xfail_strict = true
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+source = ["media_dedup"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]

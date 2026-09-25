@@ -1,0 +1,79 @@
+# Quality gate run on every commit and by the `check` helper (pre-commit run --all-files).
+# Python tools run from the project virtual environment (`language: system`), so their versions
+# come from uv.lock — one source of truth for the editor, the hooks and CI.
+default_install_hook_types: [pre-commit]
+fail_fast: false
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-merge-conflict
+      - id: check-shebang-scripts-are-executable
+      - id: check-toml
+      - id: check-yaml
+      - id: detect-private-key
+      # gettext catalogs are written by pybabel (i18n_update): its layout is the reference.
+      - id: end-of-file-fixer
+        exclude: \.pot?$
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: trailing-whitespace
+        exclude: \.pot?$
+
+  - repo: https://github.com/AleksaC/hadolint-py
+    rev: v2.15.1
+    hooks:
+      - id: hadolint
+        files: (^|/)Dockerfile$
+
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-check
+        name: ruff check
+        entry: ruff check --force-exclude --fix --exit-non-zero-on-fix
+        language: system
+        types_or: [python, pyi]
+      - id: mypy
+        name: mypy (strict)
+        entry: mypy
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false
+      - id: pylint
+        name: pylint (200 lines/file, 3 args/function)
+        entry: pylint
+        language: system
+        types: [python]
+        files: ^src/
+        require_serial: true
+      - id: pylint-tests
+        name: pylint (tests)
+        # pytest injects fixtures by parameter name (redefined-outer-name), and test
+        # helpers keep one-line docstrings: parameter/return sections are not required.
+        entry: >-
+          pylint --disable=redefined-outer-name,missing-param-doc,missing-type-doc,missing-return-doc,missing-raises-doc,missing-yield-doc
+        language: system
+        types: [python]
+        files: ^tests/
+        require_serial: true
+      - id: shellcheck
+        name: shellcheck
+        entry: shellcheck --external-sources
+        language: system
+        types: [shell]
+      - id: shfmt
+        name: shfmt
+        entry: shfmt --write --indent 4 --case-indent
+        language: system
+        types: [shell]
+        # Scripts vendored verbatim from the upstream tooling repository keep their formatting.
+        exclude: ^\.claude/
