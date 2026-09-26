@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from media_dedup.constants import PAIRS_DIR_NAME, Sizes
+from media_dedup.plan.pairs import folder_pairs
 from media_dedup.report.reasons import keep_reason_label
 from media_dedup.report.thumbnails import PREVIEWABLE, thumbnail_name
 from media_dedup.report.views import (
@@ -21,7 +22,21 @@ if TYPE_CHECKING:
 
     from media_dedup.paths.host_paths import HostPathMapper
     from media_dedup.plan.pairs import FolderPair
+    from media_dedup.report.views import ReportRecord
     from media_dedup.scan.models import MediaFile
+
+
+def report_pairs(record: ReportRecord) -> tuple[FolderPair, ...]:
+    """The folder pairs of a report, in the same order everywhere.
+
+    Args:
+        record: What the report is written from.
+
+    Returns:
+        The pairs.
+    """
+    findings = record.findings
+    return folder_pairs(findings.plan.decisions, findings.folder_files)
 
 
 def pair_samples(pair: FolderPair) -> tuple[MediaFile, ...]:

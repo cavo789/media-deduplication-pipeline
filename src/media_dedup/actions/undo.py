@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 from media_dedup.actions.journal import latest_states
 from media_dedup.actions.outcome import Incident, Outcome, Tally
+from media_dedup.actions.quarantine import QUARANTINED
 from media_dedup.constants import ActionKind, Phase, Status
 from media_dedup.i18n import _
 from media_dedup.scan.hashing import full_digest
@@ -115,7 +116,7 @@ def _source_of(entry: JournalEntry) -> Path | None:
     match entry.action:
         case ActionKind.DELETE_DUPLICATE:
             return Path(entry.keeper) if entry.keeper else None
-        case ActionKind.QUARANTINE:
+        case ActionKind.QUARANTINE | ActionKind.QUARANTINE_NEAR:
             return Path(entry.quarantine) if entry.quarantine else None
         case ActionKind.DELETE_EMPTY:
             return None
@@ -140,5 +141,5 @@ def _rebuild(entry: JournalEntry, source: Path | None) -> None:
     if entry.sha256 is not None and full_digest(path) != entry.sha256:
         path.unlink()
         raise OSError(_("the restored copy does not match the original"))
-    if entry.action is ActionKind.QUARANTINE:
+    if entry.action in QUARANTINED:
         source.unlink()

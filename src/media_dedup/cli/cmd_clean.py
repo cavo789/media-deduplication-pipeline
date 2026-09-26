@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Annotated
 
 import typer
 
-from media_dedup.cli import options
+from media_dedup.cli import clean_options, options
 from media_dedup.cli.context import folder_layer, runtime_of, scan_layer, user_errors
 from media_dedup.cli.flows import (
     audit_and_show,
@@ -17,7 +17,7 @@ from media_dedup.cli.flows import (
 )
 from media_dedup.console.progress import RichProgress
 from media_dedup.console.tables import outcome_table
-from media_dedup.constants import ExitCode, RunKind
+from media_dedup.constants import CleanTier, ExitCode, RunKind
 from media_dedup.i18n import _
 from media_dedup.report.views import ReportRecord
 from media_dedup.services.clean import CleanService
@@ -27,7 +27,8 @@ if TYPE_CHECKING:
     from media_dedup.console.output import Output
 
 
-def clean_command(  # pylint: disable=too-many-arguments
+# The options are parameters (and locals): the documented exception for Typer commands.
+def clean_command(  # pylint: disable=too-many-arguments,too-many-locals
     ctx: typer.Context,
     *,
     prefer: Annotated[list[str] | None, options.prefer()] = None,
@@ -35,6 +36,7 @@ def clean_command(  # pylint: disable=too-many-arguments
     exclude: Annotated[list[str] | None, options.exclude()] = None,
     ext: Annotated[list[str] | None, options.extensions()] = None,
     yes: Annotated[bool, options.yes()] = False,
+    tier: Annotated[CleanTier, clean_options.tier()] = CleanTier.EXACT,
 ) -> None:
     """Audit, confirm, then delete duplicate copies and handle broken files.
 
@@ -45,6 +47,7 @@ def clean_command(  # pylint: disable=too-many-arguments
         exclude: `--exclude` folders.
         ext: `--ext` extensions.
         yes: `--yes`, skip the confirmation.
+        tier: `--tier`, near duplicates are moved to the quarantine too.
 
     Raises:
         typer.Exit: The user declined.
@@ -56,9 +59,11 @@ def clean_command(  # pylint: disable=too-many-arguments
             folder_layer(prefer, protect, exclude)
         ).with_overrides(scan_layer(ext))
         service = CleanService(runtime, progress)
-        service.ensure_ready()
+        service.ensure_ready(near=tier is CleanTier.NEAR)
         findings = audit_and_show(runtime)
         plan = service.feasible(findings.plan)
+        if tier is CleanTier.NEAR:
+            plan = service.with_near(plan, findings)
         verdict = None if plan.is_empty else show_second_opinion(runtime, findings)
         if plan.is_empty:
             output.success(_("Nothing to clean: no duplicate and no broken file."))
@@ -93,5 +98,5 @@ def _after_clean_tips(output: Output, run_id: str, outcome: Outcome) -> None:
     undo_tip = _("Changed your mind? 'media-dedup undo {run_id}' restores everything.")
     output.tip(undo_tip.format(run_id=run_id))
     if outcome.quarantined:
-        purge_tip = _("Broken files are in /quarantine/{run_id}; 'purge' deletes them.")
+        purge_tip = _("Moved files are in /quarantine/{run_id}; 'purge' deletes them.")
         output.tip(purge_tip.format(run_id=run_id))

@@ -102,6 +102,8 @@ Dossiers partageant des fichiers identiques
 | Copies en trop, supprimables | Les fichiers que `clean` supprimerait. Pour chaque photo ou vidéo présente plusieurs fois, un exemplaire est gardé et les autres sont en trop : une photo rangée dans 3 dossiers donne 2 copies en trop. |
 | Espace libérable | La taille totale de ces copies en trop. |
 | Fichiers cassés | Les fichiers vides (0 octet) et ceux qui ne s'ouvrent pas (JPEG tronqué, vidéo abîmée). `clean` supprime les vides et déplace les autres en quarantaine, sans jamais les supprimer directement. |
+| Quasi-doublons | La même photo enregistrée à nouveau : réduite (WhatsApp), recompressée, pivotée, ou sans sa date EXIF. Ce ne sont pas des fichiers identiques : `clean` n'y touche pas, sauf si vous ajoutez `--tier near`, voir [plus bas](#quasi-doublons-et-rafales). |
+| Rafales | Des photos d'un même appareil prises à quelques secondes d'intervalle. Listées avec la plus nette suggérée, jamais nettoyées. |
 | Durée | Le temps qu'a pris tout l'audit. |
 
 Chaque phrase de *Dossiers partageant des fichiers identiques* décrit deux dossiers qui
@@ -212,6 +214,37 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 **Mettre à jour** : `docker pull cavo789/media-dedup` récupère la dernière version ; un tag comme
 `cavo789/media-dedup:0.1.1` en fixe une.
 
+### Quasi-doublons et rafales
+
+En plus des copies exactes, l'audit regarde à quoi ressemble chaque photo (empreintes
+perceptuelles, netteté, date et appareil EXIF). Ces informations sont calculées pendant qu'il
+vérifie que la photo est lisible, et gardées dans le cache.
+
+- **Quasi-doublons** : la même photo enregistrée à nouveau, plus petite (WhatsApp, « réduite
+  pour l'e-mail »), recompressée, pivotée ou sans sa date. Tous les tests doivent être
+  d'accord : empreintes presque identiques, même forme, et même date de prise de vue (ou
+  aucune sur la plus petite copie). Les images vides ou noires ne comptent jamais. La plus
+  haute résolution est gardée. Le rapport montre chaque groupe côte à côte, avec la
+  résolution, la taille et la netteté de chaque copie.
+- **Rafales** : des photos d'un même appareil, à quelques secondes d'intervalle, de la même
+  scène. C'est du tri, pas des doublons : elles sont seulement listées, la plus nette
+  suggérée. Rien dans une série n'est jamais nettoyé, et une photo de rafale n'est jamais
+  prise pour un quasi-doublon.
+
+Un simple `clean` ne touche jamais aux quasi-doublons. Après les avoir vérifiés dans le
+rapport, ajoutez `--tier near` : les copies sont **déplacées en quarantaine** (elles ne sont
+pas identiques, on ne pourrait pas les reconstruire à partir de la photo gardée), et `undo`
+les remet en place. `purge` les supprime définitivement. Il faut pour cela le montage
+`/quarantine` :
+
+```powershell
+docker run --rm -it `
+  -v "C:\Photos:/data/c/Photos" `
+  -v "$HOME\media-dedup\journal:/journal" `
+  -v "$HOME\media-dedup\quarantine:/quarantine" `
+  cavo789/media-dedup clean --tier near
+```
+
 ## Comment vos photos restent en sécurité
 
 | Étape | Garantie |
@@ -223,6 +256,7 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 | Chaque action | Écrite dans le journal *avant* (`pending`) et *après* (`done`) : une interruption ne fait jamais perdre le fil. |
 | Doublons | Réellement supprimés (l'espace est libéré tout de suite) ; `undo` les reconstruit depuis la copie conservée, date comprise, même d'un disque à l'autre. |
 | Fichiers illisibles | Déplacés en quarantaine, jamais supprimés directement ; `purge` les supprime définitivement quand vous êtes sûr·e. |
+| Quasi-doublons | Jamais touchés par défaut. Avec `--tier near`, déplacés en quarantaine (jamais supprimés) après vérification : la photo gardée existe toujours, la copie est bien le fichier vu par l'audit. `undo` les remet en place. |
 | Chaque groupe | Garde toujours au moins une copie. |
 
 ## Points de montage
@@ -264,6 +298,7 @@ Les options globales se placent **avant** la commande : `media-dedup --locale fr
 | `--exclude CHEMIN` | (`audit`, `clean`, `crosscheck`) Dossier jamais analysé. |
 | `--ext EXT` | (`audit`, `clean`, `crosscheck`) N'analyse que ces extensions (`--ext png,webp`) ; toutes celles prises en charge par défaut. |
 | `--yes`, `-y` | (`clean`, `purge`) Ne pas demander de confirmation. |
+| `--tier exact\|near` | (`clean`) `exact` (par défaut) : seulement les copies identiques octet par octet. `near` : déplace aussi les [quasi-doublons](#quasi-doublons-et-rafales) en quarantaine. |
 
 `media-dedup --help` et `media-dedup <commande> --help` documentent tout, dans les deux langues.
 
@@ -344,7 +379,9 @@ confirm = true
   chaque fichier qui a la même taille qu'un autre. Avec `-v media-dedup-cache:/cache`, les
   audits suivants ne lisent que les fichiers nouveaux ou modifiés. Rien que lister des dizaines
   de milliers de fichiers prend quelques minutes :
-  [chaque étape affiche sa progression](#ce-qui-saffiche-pendant-lanalyse).
+  [chaque étape affiche sa progression](#ce-qui-saffiche-pendant-lanalyse). Après la mise à
+  jour vers la 0.1.1, le premier audit décode encore une fois chaque photo, pour décrire à
+  quoi elle ressemble.
 - **Lancez avec `-it`** : sans terminal, `clean` ne peut pas demander confirmation (utilisez
   `--yes`) et les couleurs sont désactivées.
 
@@ -364,7 +401,9 @@ qu'une erreur de disque.
 - **Le nom et la date ne comptent pas.** `IMG_1234.jpg` et `Marie et Paul.jpg` avec les mêmes
   octets sont des doublons. Deux `IMG_0001.jpg` au contenu différent n'en sont pas.
 - **Se ressembler ne suffit pas.** Une copie redimensionnée, recompressée, pivotée ou dont les
-  métadonnées ont changé est un autre fichier : l'outil n'y touche pas.
+  métadonnées ont changé est un autre fichier. L'audit la liste comme
+  [quasi-doublon](#quasi-doublons-et-rafales), mais `clean` n'y touche pas, sauf si vous le
+  demandez avec `--tier near`, et alors il la déplace seulement en quarantaine.
 - **Seules les photos et vidéos** sont analysées, reconnues par leur extension. Les autres
   fichiers sont ignorés.
 

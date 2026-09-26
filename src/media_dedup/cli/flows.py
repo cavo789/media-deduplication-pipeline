@@ -112,13 +112,21 @@ def confirm_clean(runtime: Runtime, plan: CleanPlan, yes: bool) -> bool:  # noqa
             _("Cannot ask for confirmation without an interactive terminal."),
             _("Run docker with -it, or add --yes."),
         )
-    question = _(
-        "Delete {count} duplicate copies ({size}) and handle {broken} broken files?"
+    question = (
+        _(
+            "Delete {count} duplicate copies ({size}), move {near} near duplicates "
+            "to the quarantine and handle {broken} broken files?"
+        )
+        if plan.near_count
+        else _(
+            "Delete {count} duplicate copies ({size}) and handle {broken} broken files?"
+        )
     )
     return runtime.output.confirm(
         question.format(
             count=human_number(plan.removable_count),
             size=human_size(plan.reclaimable),
+            near=human_number(plan.near_count),
             broken=human_number(len(plan.broken)),
         ),
     )

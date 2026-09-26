@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from media_dedup.constants import BrokenReason, RunKind
     from media_dedup.crosscheck.compare import CrossCheckResult
     from media_dedup.plan.models import AuditFindings
+    from media_dedup.report.similar_views import SimilarSection
     from media_dedup.report.summary import ReportSummary
 
 
@@ -140,5 +141,6 @@ class ReportView:
     roots: tuple[str, ...]
     pairs: tuple[FolderPairView, ...]
     groups: GroupsSection
+    similar: SimilarSection
     broken: BrokenSection
     incidents: IncidentsSection

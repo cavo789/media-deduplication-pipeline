@@ -16,7 +16,7 @@ from media_dedup.paths.mounts import is_read_only
 
 if TYPE_CHECKING:
     from media_dedup.actions.outcome import Outcome
-    from media_dedup.plan.models import CleanPlan
+    from media_dedup.plan.models import AuditFindings, CleanPlan
     from media_dedup.scan.progress import ProgressSink
     from media_dedup.services.runtime import Runtime
 
@@ -34,13 +34,22 @@ class CleanService:
         self._runtime = runtime
         self._progress = progress
 
-    def ensure_ready(self) -> None:
+    def ensure_ready(self, *, near: bool = False) -> None:
         """Check, before any analysis, that cleaning is possible and reversible.
 
+        Args:
+            near: Near duplicates will be moved to the quarantine (`--tier near`).
+
         Raises:
-            MountError: The journal is not persistent, or a folder is read-only.
+            MountError: The journal is not persistent, a folder is read-only, or near
+                duplicates have no quarantine to go to.
         """
         runtime = self._runtime
+        if near and not runtime.persistent(MountKind.QUARANTINE):
+            raise MountError(
+                _("--tier near moves near duplicates to /quarantine: mount it."),
+                _('Add -v "<a folder of yours>:/quarantine" to handle them.'),
+            )
         if not runtime.persistent(MountKind.JOURNAL):
             raise MountError(
                 _("No journal mount: without a journal, 'undo' would be impossible."),
@@ -80,6 +89,21 @@ class CleanService:
                 _('Add -v "<a folder of yours>:/quarantine" to handle them.')
             )
         return replace(plan, broken=kept)
+
+    def with_near(self, plan: CleanPlan, findings: AuditFindings) -> CleanPlan:
+        """Add the near duplicates to the plan (`--tier near`).
+
+        Args:
+            plan: The feasible plan.
+            findings: The audit, holding the near duplicates.
+
+        Returns:
+            The plan, near duplicates included.
+
+        Near duplicates are moved to the quarantine, never deleted: `ensure_ready`
+        with `near=True` has checked it is mounted.
+        """
+        return replace(plan, near=findings.similar.near)
 
     def execute(self, plan: CleanPlan) -> tuple[str, Outcome]:
         """Execute the plan under a new run identifier.

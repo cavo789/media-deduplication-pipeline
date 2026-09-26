@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from media_dedup.constants import BrokenReason
+    from media_dedup.scan.models import VisualFacts
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,6 +19,8 @@ class FileFacts:
     integrity_checked: bool = False
     broken_reason: BrokenReason | None = None
     broken_detail: str = ""
+    visual_checked: bool = False
+    visual: VisualFacts | None = None
 
     def with_partial(self, digest: str) -> FileFacts:
         """Return a copy holding the partial digest.
@@ -57,3 +60,14 @@ class FileFacts:
             broken_reason=reason,
             broken_detail=detail,
         )
+
+    def with_visual(self, visual: VisualFacts | None) -> FileFacts:
+        """Return a copy holding what an image looks like (None when unreadable).
+
+        Args:
+            visual: The visual facts computed while decoding the image.
+
+        Returns:
+            The updated facts.
+        """
+        return replace(self, visual_checked=True, visual=visual)

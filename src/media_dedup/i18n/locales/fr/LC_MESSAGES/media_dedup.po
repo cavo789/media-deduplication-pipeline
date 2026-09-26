@@ -20,6 +20,12 @@ msgid_plural "%(num)s copies"
 msgstr[0] "%(num)s copie"
 msgstr[1] "%(num)s copies"
 
+#, python-format
+msgid "%(num)s shot"
+msgid_plural "%(num)s shots"
+msgstr[0] "%(num)s photo"
+msgstr[1] "%(num)s photos"
+
 msgid "'crosscheck' reads Czkawka's results from /reports: mount it."
 msgstr "'crosscheck' lit les résultats de Czkawka dans /reports : montez-le."
 
@@ -28,6 +34,9 @@ msgstr "'media-dedup undo <run>' restaure les fichiers d'une exécution."
 
 msgid "'undo' can no longer restore these broken files."
 msgstr "'undo' ne pourra plus restaurer ces fichiers cassés."
+
+msgid "--tier near moves near duplicates to /quarantine: mount it."
+msgstr "--tier near déplace les quasi-doublons dans /quarantine : montez-le."
 
 msgid "<the folder you mount on /reports>"
 msgstr "<le dossier que vous montez sur /reports>"
@@ -134,12 +143,14 @@ msgstr "Fichiers cassés"
 msgid "Broken files (empty or unreadable)"
 msgstr "Fichiers cassés (vides ou illisibles)"
 
-#, python-brace-format
-msgid "Broken files are in /quarantine/{run_id}; 'purge' deletes them."
-msgstr "Les fichiers cassés sont dans /quarantine/{run_id} ; 'purge' les supprime."
-
 msgid "Broken files in protected folders"
 msgstr "Fichiers cassés dans des dossiers protégés"
+
+msgid "Burst series"
+msgstr "Rafales"
+
+msgid "Burst series (listed, never cleaned)"
+msgstr "Rafales (listées, jamais nettoyées)"
 
 msgid "Cannot ask for confirmation without an interactive terminal."
 msgstr "Impossible de demander confirmation sans terminal interactif."
@@ -250,6 +261,14 @@ msgid "Delete {count} duplicate copies ({size}) and handle {broken} broken files
 msgstr ""
 "Supprimer {count} copies en double ({size}) et traiter {broken} fichiers "
 "cassés ?"
+
+#, python-brace-format
+msgid ""
+"Delete {count} duplicate copies ({size}), move {near} near duplicates to "
+"the quarantine and handle {broken} broken files?"
+msgstr ""
+"Supprimer {count} copies en double ({size}), déplacer {near} quasi-"
+"doublons en quarantaine et traiter {broken} fichiers cassés ?"
 
 msgid "Deleted"
 msgstr "Supprimés"
@@ -513,8 +532,27 @@ msgstr ""
 msgid "Mount your folders, e.g. -v \"C:\\Photos:/data/c/Photos:ro\"."
 msgstr "Montez vos dossiers, p. ex. -v \"C:\\Photos:/data/c/Photos:ro\"."
 
+#, python-brace-format
+msgid "Moved files are in /quarantine/{run_id}; 'purge' deletes them."
+msgstr ""
+"Les fichiers déplacés sont dans /quarantine/{run_id} ; 'purge' les "
+"supprime."
+
 msgid "Moved to the quarantine"
 msgstr "Déplacés en quarantaine"
+
+msgid "Near duplicates"
+msgstr "Quasi-doublons"
+
+msgid "Near duplicates (moved only with --tier near)"
+msgstr "Quasi-doublons (déplacés seulement avec --tier near)"
+
+msgid ""
+"Near duplicates and bursts are in the HTML report; 'clean --tier near' "
+"moves near duplicates to the quarantine."
+msgstr ""
+"Les quasi-doublons et les rafales sont dans le rapport HTML ; 'clean "
+"--tier near' déplace les quasi-doublons en quarantaine."
 
 msgid "Never analysed: e.g. a real backup that must remain a second copy."
 msgstr ""
@@ -777,6 +815,15 @@ msgstr "Mis de côté, car media-dedup ne les analyse pas : {details}."
 msgid "Setting"
 msgstr "Réglage"
 
+msgid ""
+"Shots of one camera, taken seconds apart. This is not duplication: "
+"nothing here is ever cleaned. The sharpest shot of each series is "
+"suggested; the choice is yours."
+msgstr ""
+"Des photos d'un même appareil, prises à quelques secondes d'intervalle. "
+"Ce ne sont pas des doublons : rien ici n'est jamais nettoyé. La photo la "
+"plus nette de chaque série est suggérée ; le choix vous appartient."
+
 msgid "Show every setting, where it comes from, and the mount points."
 msgstr "Affiche chaque réglage, son origine, et les points de montage."
 
@@ -828,6 +875,19 @@ msgid ""
 msgstr ""
 "Le même dossier est monté deux fois : {folders}. Chacun de ses fichiers "
 "passerait pour un doublon de lui-même."
+
+msgid ""
+"The same picture saved again: resized, recompressed or without its date. "
+"They are not identical files, so a plain 'clean' leaves them alone; "
+"'clean --tier near' moves the copies to the quarantine, where 'undo' "
+"finds them again. The highest resolution is kept. Compare each copy with "
+"the kept picture first."
+msgstr ""
+"La même photo enregistrée à nouveau : redimensionnée, recompressée ou "
+"sans sa date. Ce ne sont pas des fichiers identiques : un simple 'clean' "
+"n'y touche pas ; 'clean --tier near' déplace les copies en quarantaine, "
+"où 'undo' les retrouve. La plus haute résolution est gardée. Comparez "
+"d'abord chaque copie à la photo gardée."
 
 msgid "The whole plan as a spreadsheet (CSV): every group, every file"
 msgstr "Le plan complet en tableur (CSV) : chaque groupe, chaque fichier"
@@ -958,6 +1018,15 @@ msgstr "entièrement une copie : ne contient rien d'autre"
 msgid "environment"
 msgstr "environnement"
 
+msgid ""
+"exact: delete byte-for-byte copies only. near: also move near duplicates "
+"(resized or recompressed copies) to the quarantine; check them in the "
+"report first."
+msgstr ""
+"exact : supprime seulement les copies identiques octet par octet. near : "
+"déplace aussi les quasi-doublons (copies redimensionnées ou "
+"recompressées) en quarantaine ; vérifiez-les d'abord dans le rapport."
+
 msgid "ffprobe not found: videos are not checked."
 msgstr "ffprobe introuvable : les vidéos ne sont pas vérifiées."
 
@@ -1024,6 +1093,12 @@ msgstr "protégé, gardé"
 msgid "run"
 msgstr "exécution"
 
+msgid "sharpest"
+msgstr "la plus nette"
+
+msgid "sharpness"
+msgstr "netteté"
+
 msgid "the file already exists"
 msgstr "le fichier existe déjà"
 
@@ -1051,6 +1126,9 @@ msgstr "la copie restaurée ne correspond pas à l'original"
 
 msgid "the shortest path"
 msgstr "le chemin le plus court"
+
+msgid "to the quarantine with --tier near"
+msgstr "en quarantaine avec --tier near"
 
 msgid "why:"
 msgstr "pourquoi :"
@@ -1134,6 +1212,14 @@ msgid "… and %(count)s more groups (largest files are shown first)."
 msgstr ""
 "… et %(count)s groupes de plus (les plus gros fichiers sont affichés en "
 "premier)."
+
+#, python-format
+msgid "… and %(count)s more groups."
+msgstr "… et %(count)s groupes de plus."
+
+#, python-format
+msgid "… and %(count)s more series."
+msgstr "… et %(count)s séries de plus."
 
 #, python-brace-format
 msgid "… and {count} more."

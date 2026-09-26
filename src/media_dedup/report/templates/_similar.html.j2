@@ -1,0 +1,37 @@
+{# Near duplicates and burst series: included by report.html.j2. #}
+{% macro shot(item, label, css) %}
+<figure class="shot {{ css }}">
+  <div class="thumb">{% if item.thumbnail %}<img src="{{ item.thumbnail }}" alt="" loading="lazy">{% else %}🖼️{% endif %}</div>
+  <figcaption>
+    <strong>{{ label }}</strong><br>
+    <span class="path">{{ item.path }}</span><br>
+    <span class="muted">{{ item.width }} × {{ item.height }} · {{ item.size | size }} · {{ _("sharpness") }} {{ item.sharpness | number }}{% if item.taken_at %} · {{ item.taken_at }}{% endif %}</span>
+  </figcaption>
+</figure>
+{% endmacro %}
+
+{% set sim = report.similar %}
+{% if sim.near %}
+<h2>🪞 {{ _("Near duplicates") }}</h2>
+<p class="note">{{ _("The same picture saved again: resized, recompressed or without its date. They are not identical files, so a plain 'clean' leaves them alone; 'clean --tier near' moves the copies to the quarantine, where 'undo' finds them again. The highest resolution is kept. Compare each copy with the kept picture first.") }}</p>
+{% for group in sim.near %}
+<div class="shots">
+  {{ shot(group.kept, "✅ " ~ _("kept"), "keep") }}
+  {% for item in group.copies %}{{ shot(item, "📦 " ~ _("to the quarantine with --tier near"), "remove") }}{% endfor %}
+  {% for item in group.protected %}{{ shot(item, "🔒 " ~ _("protected folder, kept"), "lock") }}{% endfor %}
+</div>
+{% endfor %}
+{% if sim.hidden_near %}<p class="muted">{{ _("… and %(count)s more groups.", count=sim.hidden_near | number) }}</p>{% endif %}
+{% endif %}
+
+{% if sim.bursts %}
+<h2>📸 {{ _("Burst series") }}</h2>
+<p class="note">{{ _("Shots of one camera, taken seconds apart. This is not duplication: nothing here is ever cleaned. The sharpest shot of each series is suggested; the choice is yours.") }}</p>
+{% for series in sim.bursts %}
+<p class="muted">{{ series.camera }} · {{ ngettext("%(num)s shot", "%(num)s shots", series.shots | length, num=series.shots | length) }}</p>
+<div class="shots">
+  {% for item in series.shots %}{{ shot(item, ("⭐ " ~ _("sharpest")) if item.path == series.best else "", "keep" if item.path == series.best else "") }}{% endfor %}
+</div>
+{% endfor %}
+{% if sim.hidden_bursts %}<p class="muted">{{ _("… and %(count)s more series.", count=sim.hidden_bursts | number) }}</p>{% endif %}
+{% endif %}

@@ -1,4 +1,4 @@
-"""Decode an image fully to prove it is readable — run in worker processes."""
+"""Decode an image to prove it is readable, and describe it (in worker processes)."""
 
 from __future__ import annotations
 
@@ -6,15 +6,18 @@ import signal
 import struct
 import threading
 import warnings
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 import pillow_heif
 from PIL import Image
 
-from media_dedup.constants import Sizes
+from media_dedup.scan.visual import ANALYSIS_EDGE, visual_facts
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from media_dedup.scan.models import VisualFacts
 
 # A corrupt file can make a decoder raise almost anything: all mean "unreadable".
 _DECODE_ERRORS: Final = (
@@ -45,14 +48,25 @@ def prepare_image_worker() -> None:
     Image.MAX_IMAGE_PIXELS = None
 
 
-def image_problem(path: Path) -> str | None:
-    """Verify the structure of an image, then decode it (downscaled for JPEG speed).
+@dataclass(frozen=True, slots=True)
+class ImageInspection:
+    """Outcome of decoding an image: the decoder error, or what the image looks like."""
+
+    problem: str | None = None
+    visual: VisualFacts | None = None
+
+
+def inspect_image(path: Path) -> ImageInspection:
+    """Verify the structure of an image, decode it, then describe it.
+
+    JPEG files are decoded at a reduced scale (still at least `ANALYSIS_EDGE` pixels
+    per side when the photo is that large): every byte is still read and checked.
 
     Args:
         path: Image file.
 
     Returns:
-        The decoder error, or None when the image is readable.
+        The decoder error, or the visual facts of a readable image.
     """
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -60,12 +74,9 @@ def image_problem(path: Path) -> str | None:
             with Image.open(path) as image:
                 image.verify()
             with Image.open(path) as image:
-                size = (
-                    max(1, image.width // Sizes.JPEG_DRAFT_DIVISOR),
-                    max(1, image.height // Sizes.JPEG_DRAFT_DIVISOR),
-                )
-                image.draft("RGB", size)
+                stored_size = image.size
+                image.draft("RGB", (ANALYSIS_EDGE, ANALYSIS_EDGE))
                 image.load()
+                return ImageInspection(visual=visual_facts(image, stored_size))
         except _DECODE_ERRORS as exc:
-            return f"{type(exc).__name__}: {exc}"
-    return None
+            return ImageInspection(problem=f"{type(exc).__name__}: {exc}")

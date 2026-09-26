@@ -6,11 +6,14 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
+from media_dedup.plan.similar_models import SimilarFindings
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
     from media_dedup.constants import KeepReason
+    from media_dedup.plan.similar_models import NearDecision
     from media_dedup.scan.models import BrokenFile, DuplicateGroup, MediaFile
 
 
@@ -42,6 +45,7 @@ class CleanPlan:
     decisions: tuple[KeepDecision, ...]
     broken: tuple[BrokenFile, ...]
     protected_broken: tuple[BrokenFile, ...] = ()
+    near: tuple[NearDecision, ...] = ()
 
     @property
     def removable_count(self) -> int:
@@ -75,9 +79,18 @@ class CleanPlan:
         """Tell whether there is nothing to clean.
 
         Returns:
-            True when no duplicate copy and no broken file are actionable.
+            True when no duplicate copy, near duplicate or broken file is actionable.
         """
-        return not self.removable_count and not self.broken
+        return not self.removable_count and not self.broken and not self.near_count
+
+    @property
+    def near_count(self) -> int:
+        """Number of near duplicates to move to the quarantine (`--tier near` only).
+
+        Returns:
+            The count.
+        """
+        return sum(len(decision.removable) for decision in self.near)
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,3 +105,4 @@ class AuditFindings:
         default_factory=lambda: MappingProxyType({})
     )
     groups: tuple[DuplicateGroup, ...] = ()
+    similar: SimilarFindings = field(default_factory=SimilarFindings)

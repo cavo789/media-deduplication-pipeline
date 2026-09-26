@@ -1,16 +1,16 @@
-"""Execute a clean plan: delete duplicate copies, delete or quarantine broken files."""
+"""Execute a plan: delete exact copies, quarantine near ones, handle broken files."""
 
 from __future__ import annotations
 
 import logging
-import shutil
 from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING
 
 from media_dedup.actions.journal import JournalEntry
 from media_dedup.actions.outcome import Incident, Outcome, Tally
-from media_dedup.actions.verify import removal_blocker
+from media_dedup.actions.quarantine import move_verified
+from media_dedup.actions.verify import change_blocker, near_blocker, removal_blocker
 from media_dedup.constants import ActionKind, BrokenReason, Phase, Status
 from media_dedup.i18n import _
 from media_dedup.scan.hashing import full_digest
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from media_dedup.actions.journal import JournalWriter
     from media_dedup.paths.host_paths import HostPathMapper
     from media_dedup.plan.models import CleanPlan, KeepDecision
+    from media_dedup.plan.similar_models import NearDecision
     from media_dedup.scan.models import BrokenFile, MediaFile
     from media_dedup.scan.progress import ProgressSink
 
@@ -68,10 +69,14 @@ class CleanExecutor:
                 "unreadable files go to the quarantine."
             ),
         )
-        self._context.progress.start(step, plan.removable_count + len(plan.broken))
+        total = plan.removable_count + plan.near_count + len(plan.broken)
+        self._context.progress.start(step, total)
         for decision in plan.decisions:
             for file in decision.removable:
                 self._guarded(file, partial(self._delete_copy, decision, file))
+        for near in plan.near:
+            for file in near.removable:
+                self._guarded(file, partial(self._quarantine_near, near, file))
         for item in plan.broken:
             self._guarded(item.file, partial(self._handle_broken, item))
         self._context.progress.stop()
@@ -108,27 +113,56 @@ class CleanExecutor:
         )
         self._act(entry, file.path.unlink)
 
+    def _quarantine_near(self, decision: NearDecision, file: MediaFile) -> None:
+        """Move one near duplicate to the quarantine, where `undo` finds it again.
+
+        Args:
+            decision: The near-duplicate decision, holding the kept picture.
+            file: Copy to move.
+        """
+        blocker = near_blocker(decision.keeper.path, file)
+        if blocker is not None:
+            self._tally.skipped.append(Incident(file.path, blocker))
+            return
+        self._quarantine(file, ActionKind.QUARANTINE_NEAR, decision.keeper.path)
+
+    def _quarantine(
+        self, file: MediaFile, action: ActionKind, keeper: Path | None = None
+    ) -> None:
+        """Move a file to this run's quarantine, journaled.
+
+        Args:
+            file: File to move.
+            action: Why it is moved.
+            keeper: The picture kept instead, when there is one.
+        """
+        path = file.path
+        target = self._context.quarantine_run_dir / self._context.mapper.relative(path)
+        entry = self._entry(file, action).model_copy(
+            update={
+                "quarantine": str(target),
+                "sha256": full_digest(path),
+                "keeper": str(keeper) if keeper else None,
+            },
+        )
+        self._act(entry, lambda: move_verified(path, target))
+        self._tally.quarantined += 1
+
     def _handle_broken(self, item: BrokenFile) -> None:
         """Delete an empty file, or move an unreadable one to the quarantine.
 
         Args:
             item: The broken file.
         """
-        path = item.file.path
-        if not path.is_file() or path.stat().st_size != item.file.size:
-            self._tally.skipped.append(
-                Incident(path, _("a file changed since the audit"))
-            )
+        blocker = change_blocker(item.file)
+        if blocker is not None:
+            self._tally.skipped.append(Incident(item.file.path, blocker))
             return
         if item.reason is BrokenReason.EMPTY:
-            self._act(self._entry(item.file, ActionKind.DELETE_EMPTY), path.unlink)
+            entry = self._entry(item.file, ActionKind.DELETE_EMPTY)
+            self._act(entry, item.file.path.unlink)
             return
-        target = self._context.quarantine_run_dir / self._context.mapper.relative(path)
-        entry = self._entry(item.file, ActionKind.QUARANTINE).model_copy(
-            update={"quarantine": str(target), "sha256": full_digest(path)},
-        )
-        self._act(entry, lambda: _move_verified(path, target))
-        self._tally.quarantined += 1
+        self._quarantine(item.file, ActionKind.QUARANTINE)
 
     def _entry(self, file: MediaFile, action: ActionKind) -> JournalEntry:
         """Build the `pending` journal entry of an action.
@@ -164,23 +198,3 @@ class CleanExecutor:
         self._context.journal.record(entry.as_done())
         self._tally.done += 1
         self._tally.bytes_done += entry.size
-
-
-def _move_verified(source: Path, target: Path) -> None:
-    """Copy `source` to `target`, prove the copy identical, then delete `source`.
-
-    Works across disks, unlike a rename.
-
-    Args:
-        source: File to move.
-        target: Destination.
-
-    Raises:
-        OSError: The copy differs from the original (the original is kept).
-    """
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, target)
-    if full_digest(source) != full_digest(target):
-        target.unlink()
-        raise OSError(_("the quarantine copy differs from the original"))
-    source.unlink()

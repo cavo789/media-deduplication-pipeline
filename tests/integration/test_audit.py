@@ -95,7 +95,7 @@ def test_second_audit_reuses_the_index(
         raise AssertionError
 
     monkeypatch.setattr("media_dedup.scan.exact.full_digest", forbidden)
-    monkeypatch.setattr("media_dedup.scan.broken.image_problem", forbidden)
+    monkeypatch.setattr("media_dedup.scan.broken.inspect_image", forbidden)
     second = audit(locations)
     assert len(second.plan.decisions) == len(first.plan.decisions)
 

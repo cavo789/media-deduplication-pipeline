@@ -2,8 +2,9 @@
 
 Layout, with the /data/<drive letter>/<path> convention of the image:
 exact copies across "C:" and "D:", Windows-style "(1)" copies, an empty file,
-a truncated JPEG, HEIC and MP4 duplicates, a broken video, a sidecar, and a
-burst of similar-but-different photos that must never be touched.
+a truncated JPEG, HEIC and MP4 duplicates, a broken video, a sidecar, a burst of
+similar-but-different photos that must never be touched (one of them blurred), and
+one photo saved again smaller (WhatsApp) and recompressed without its date.
 """
 
 from __future__ import annotations
@@ -12,12 +13,16 @@ import sys
 from pathlib import Path
 
 from tests.support.media import FFMPEG, MediaFactory
+from tests.support.scenes import Effect, Shot, write_shot
 
 _PHOTOS = "c/Family Photos"
 _PICTURES = "c/Users/Public/Pictures"
 _BACKUP = "d/backup"
-_BURST_SIZE = 5
+_BURST_SIZE = 4
 _BURST_SEED = 100
+_BLURRED_SHOT = 2
+_BEACH_SEED = 200
+_WHATSAPP_SIZE = (240, 180)
 
 
 def build_demo(data_dir: Path) -> None:
@@ -42,11 +47,38 @@ def build_demo(data_dir: Path) -> None:
     media.truncated(first, f"{_BACKUP}/2020/IMG_0001_interrupted.jpg")
     (data_dir / _PHOTOS / "2019/Vacances/IMG_0001.xmp").write_text("<x:xmpmeta/>")
     for shot in range(_BURST_SIZE):
-        media.image(f"{_PHOTOS}/Rafale/IMG_20{shot}.jpg", seed=_BURST_SEED + shot)
+        write_shot(
+            data_dir / f"{_PHOTOS}/Rafale/IMG_20{shot}.jpg",
+            Shot(
+                _BURST_SEED,
+                shift=4 * shot,
+                taken_at=f"2021:07:04 10:15:0{shot}",
+                effect=Effect.BLURRED if shot == _BLURRED_SHOT else Effect.NONE,
+            ),
+        )
+    _near_duplicates(data_dir)
     if FFMPEG is not None:
         video = media.video(f"{_PHOTOS}/Vidéos/anniversaire.mp4")
         media.copy(video, f"{_BACKUP}/Vidéos/anniversaire.mp4")
         media.truncated(video, f"{_BACKUP}/Vidéos/anniversaire-coupée.mp4")
+
+
+def _near_duplicates(data_dir: Path) -> None:
+    """One beach photo, saved again smaller and recompressed without EXIF.
+
+    Args:
+        data_dir: Directory standing for the /data mount point.
+    """
+    date = "2021:07:05 16:20:00"
+    write_shot(data_dir / f"{_PHOTOS}/2021/Plage.jpg", Shot(_BEACH_SEED, taken_at=date))
+    write_shot(
+        data_dir / f"{_PICTURES}/WhatsApp/IMG-20210705-WA0001.jpg",
+        Shot(_BEACH_SEED, size=_WHATSAPP_SIZE, camera=False, quality=70),
+    )
+    write_shot(
+        data_dir / f"{_BACKUP}/email/Plage (petite).jpg",
+        Shot(_BEACH_SEED, camera=False, quality=40),
+    )
 
 
 if __name__ == "__main__":

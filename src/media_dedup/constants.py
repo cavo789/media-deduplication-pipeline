@@ -84,6 +84,14 @@ class ActionKind(StrEnum):
     DELETE_DUPLICATE = "delete-duplicate"
     DELETE_EMPTY = "delete-empty"
     QUARANTINE = "quarantine"
+    QUARANTINE_NEAR = "quarantine-near"
+
+
+class CleanTier(StrEnum):
+    """How far `clean` goes: exact duplicates only, or near duplicates too."""
+
+    EXACT = "exact"
+    NEAR = "near"
 
 
 class Phase(StrEnum):
@@ -121,11 +129,11 @@ class Sizes(IntEnum):
     HASH_CHUNK = 1024 * 1024
     PARTIAL_HASH = 64 * 1024
     THUMBNAIL_EDGE = 160
-    JPEG_DRAFT_DIVISOR = 8
     MAX_GROUPS_IN_REPORT = 500
     PAIR_SAMPLES = 4
     MAX_SAMPLED_PAIRS = 50
     RANDOM_SAMPLE = 30
+    MAX_SIMILAR_IN_REPORT = 200
     IO_CONCURRENCY = 16
 
 

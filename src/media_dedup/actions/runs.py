@@ -7,7 +7,8 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final
 
 from media_dedup.actions.journal import journal_file, latest_states, read_journal
-from media_dedup.constants import JOURNAL_SUFFIX, ActionKind, Phase, Status
+from media_dedup.actions.quarantine import QUARANTINED
+from media_dedup.constants import JOURNAL_SUFFIX, Phase, Status
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -60,7 +61,7 @@ def summarize(journal_dir: Path, run_id: str) -> RunSummary:
         if e.status is Status.DONE
     ]
     restored = latest_states(entries, Phase.UNDO).values()
-    removed = [e for e in done if e.action is not ActionKind.QUARANTINE]
+    removed = [e for e in done if e.action not in QUARANTINED]
     return RunSummary(
         run_id=run_id,
         deleted=len(removed),

@@ -43,6 +43,16 @@ def findings_table(findings: AuditFindings) -> Table:
     table.add_row(
         _("Broken files (empty or unreadable)"), human_number(len(plan.broken))
     )
+    similar = findings.similar
+    if similar.near_count:
+        table.add_row(
+            _("Near duplicates (moved only with --tier near)"),
+            human_number(similar.near_count),
+        )
+    if similar.bursts:
+        table.add_row(
+            _("Burst series (listed, never cleaned)"), human_number(len(similar.bursts))
+        )
     if plan.protected_broken:
         table.add_row(
             _("Broken files in protected folders"),

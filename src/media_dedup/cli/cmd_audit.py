@@ -65,6 +65,13 @@ def audit_command(  # pylint: disable=too-many-arguments
                     "config.toml, or --prefer."
                 ),
             )
+    if findings.similar.near_count or findings.similar.bursts:
+        output.tip(
+            _(
+                "Near duplicates and bursts are in the HTML report; "
+                "'clean --tier near' moves near duplicates to the quarantine."
+            ),
+        )
     if not runtime.persistent(MountKind.CACHE):
         output.tip(
             _("Add -v media-dedup-cache:/cache: the next audits will be much faster.")

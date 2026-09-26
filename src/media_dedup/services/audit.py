@@ -16,8 +16,9 @@ from media_dedup.index.repository import FactsRepository
 from media_dedup.paths.mount_kind import MountKind
 from media_dedup.plan.models import AuditFindings
 from media_dedup.plan.planner import build_plan
+from media_dedup.plan.similar import SimilarInputs, find_similar
 from media_dedup.scan.aliases import unique_files
-from media_dedup.scan.broken import BrokenFileFinder
+from media_dedup.scan.broken import BrokenFileFinder, IntegrityFindings
 from media_dedup.scan.deps import IntegrityTools, ScanDeps
 from media_dedup.scan.exact import ExactDuplicateFinder
 from media_dedup.scan.progress import Step
@@ -31,7 +32,7 @@ from media_dedup.services.policy import keep_policy, scan_filters, unmounted_fol
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from media_dedup.scan.models import BrokenFile, DuplicateGroup, MediaFile
+    from media_dedup.scan.models import DuplicateGroup, MediaFile
     from media_dedup.scan.progress import ProgressSink
     from media_dedup.services.runtime import Runtime
 
@@ -80,7 +81,7 @@ class AuditService:
             runtime.executor_factory() as executor,
         ):
             deps = ScanDeps(repository, self._progress)
-            groups, broken = asyncio.run(
+            groups, integrity = asyncio.run(
                 _analyse(
                     files,
                     BrokenFileFinder(deps, IntegrityTools(executor, ffprobe)),
@@ -91,10 +92,13 @@ class AuditService:
         return AuditFindings(
             files_scanned=len(files),
             roots=roots,
-            plan=build_plan(groups, broken, policy),
+            plan=build_plan(groups, integrity.broken, policy),
             seconds=time.monotonic() - started,
             folder_files=MappingProxyType(Counter(file.path.parent for file in files)),
             groups=groups,
+            similar=find_similar(
+                SimilarInputs(files, integrity.visuals, groups), policy
+            ),
         )
 
     def _list_files(self, roots: tuple[Path, ...]) -> list[MediaFile]:
@@ -147,8 +151,8 @@ async def _analyse(
     files: list[MediaFile],
     broken_finder: BrokenFileFinder,
     exact_finder: ExactDuplicateFinder,
-) -> tuple[tuple[DuplicateGroup, ...], tuple[BrokenFile, ...]]:
-    """Find broken files first, then exact duplicates among the healthy ones.
+) -> tuple[tuple[DuplicateGroup, ...], IntegrityFindings]:
+    """Find broken files first (describing images), then exact duplicates.
 
     Broken and empty files are kept out of duplicate groups: they are handled on their
     own (deleted when empty, quarantined when unreadable).
@@ -159,11 +163,11 @@ async def _analyse(
         exact_finder: Duplicate finder.
 
     Returns:
-        The duplicate groups and the broken files.
+        The duplicate groups, the broken files and the visual facts of images.
     """
-    broken = await broken_finder.find(files)
-    broken_paths = {item.file.path for item in broken}
+    integrity = await broken_finder.find(files)
+    broken_paths = {item.file.path for item in integrity.broken}
     healthy = [
         file for file in files if file.size > 0 and file.path not in broken_paths
     ]
-    return await exact_finder.find(healthy), broken
+    return await exact_finder.find(healthy), integrity

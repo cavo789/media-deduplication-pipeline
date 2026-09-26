@@ -7,13 +7,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from media_dedup.constants import PLAN_CSV_FILE_NAME, RunKind, Sizes
-from media_dedup.plan.pairs import folder_pairs
 from media_dedup.report.group_views import (
     GroupRenderer,
     largest_groups,
     sample_groups,
 )
-from media_dedup.report.pair_views import PairRenderer, sampled_files
+from media_dedup.report.pair_views import PairRenderer, report_pairs, sampled_files
+from media_dedup.report.similar_views import SimilarRenderer, similar_files
 from media_dedup.report.summary import CrossCheckSummary, ReportSummary
 from media_dedup.report.thumbnails import PREVIEWABLE, ThumbnailJob, thumbnail_name
 from media_dedup.report.views import (
@@ -30,7 +30,6 @@ if TYPE_CHECKING:
 
     from media_dedup.actions.outcome import Incident
     from media_dedup.paths.host_paths import HostPathMapper
-    from media_dedup.plan.pairs import FolderPair
     from media_dedup.report.views import PairPageView, ReportRecord
     from media_dedup.scan.models import BrokenFile
 
@@ -49,7 +48,7 @@ class ReportBuilder:
             record: What the report is written from.
 
         Returns:
-            One job per previewable keeper, pair sample or broken image.
+            One job per previewable keeper, sample, similar picture or broken image.
         """
         plan = record.findings.plan
         groups = (*largest_groups(plan), *sample_groups(plan))
@@ -57,7 +56,8 @@ class ReportBuilder:
             file.path: file
             for file in (
                 *(decision.keeper for decision in groups),
-                *sampled_files(_pairs(record)),
+                *sampled_files(report_pairs(record)),
+                *similar_files(record.findings.similar),
                 *(item.file for item in plan.broken),
             )
         }
@@ -110,7 +110,10 @@ class ReportBuilder:
             roots=self._roots(record.findings.roots),
             pairs=tuple(
                 self._renderer(record, previews).summary(index, pair)
-                for index, pair in enumerate(_pairs(record), start=1)
+                for index, pair in enumerate(report_pairs(record), start=1)
+            ),
+            similar=SimilarRenderer(self.mapper, names).section(
+                record.findings.similar
             ),
             groups=GroupsSection(
                 sample=tuple(groups.group(d) for d in sample_groups(plan)),
@@ -146,7 +149,7 @@ class ReportBuilder:
             (view.pair.page, view)
             for view in (
                 renderer.page(index, pair)
-                for index, pair in enumerate(_pairs(record), start=1)
+                for index, pair in enumerate(report_pairs(record), start=1)
             )
         )
 
@@ -181,16 +184,3 @@ class ReportBuilder:
             IncidentView(self.mapper.to_host(Path(item.path)), item.reason)
             for item in incidents
         )
-
-
-def _pairs(record: ReportRecord) -> tuple[FolderPair, ...]:
-    """The folder pairs of a report, the same order everywhere.
-
-    Args:
-        record: What the report is written from.
-
-    Returns:
-        The pairs.
-    """
-    findings = record.findings
-    return folder_pairs(findings.plan.decisions, findings.folder_files)

@@ -106,6 +106,8 @@
 {% if report.groups.hidden %}<p class="muted">{{ _("… and %(count)s more groups (largest files are shown first).", count=report.groups.hidden | number) }}</p>{% endif %}
 {% endif %}
 
+{% include "_similar.html.j2" %}
+
 {% if report.broken.handled or report.broken.protected %}
 <h2>💔 {{ _("Broken files") }}</h2>
 <p class="muted">{{ _("Empty files are deleted; unreadable ones are moved to the quarantine, never deleted outright.") }}</p>

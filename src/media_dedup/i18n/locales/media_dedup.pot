@@ -4,6 +4,12 @@ msgid_plural "%(num)s copies"
 msgstr[0] ""
 msgstr[1] ""
 
+#, python-format
+msgid "%(num)s shot"
+msgid_plural "%(num)s shots"
+msgstr[0] ""
+msgstr[1] ""
+
 msgid "'crosscheck' reads Czkawka's results from /reports: mount it."
 msgstr ""
 
@@ -11,6 +17,9 @@ msgid "'media-dedup undo <run>' restores the files of a run."
 msgstr ""
 
 msgid "'undo' can no longer restore these broken files."
+msgstr ""
+
+msgid "--tier near moves near duplicates to /quarantine: mount it."
 msgstr ""
 
 msgid "<the folder you mount on /reports>"
@@ -101,11 +110,13 @@ msgstr ""
 msgid "Broken files (empty or unreadable)"
 msgstr ""
 
-#, python-brace-format
-msgid "Broken files are in /quarantine/{run_id}; 'purge' deletes them."
+msgid "Broken files in protected folders"
 msgstr ""
 
-msgid "Broken files in protected folders"
+msgid "Burst series"
+msgstr ""
+
+msgid "Burst series (listed, never cleaned)"
 msgstr ""
 
 msgid "Cannot ask for confirmation without an interactive terminal."
@@ -195,6 +206,12 @@ msgstr ""
 
 #, python-brace-format
 msgid "Delete {count} duplicate copies ({size}) and handle {broken} broken files?"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Delete {count} duplicate copies ({size}), move {near} near duplicates to "
+"the quarantine and handle {broken} broken files?"
 msgstr ""
 
 msgid "Deleted"
@@ -427,7 +444,22 @@ msgstr ""
 msgid "Mount your folders, e.g. -v \"C:\\Photos:/data/c/Photos:ro\"."
 msgstr ""
 
+#, python-brace-format
+msgid "Moved files are in /quarantine/{run_id}; 'purge' deletes them."
+msgstr ""
+
 msgid "Moved to the quarantine"
+msgstr ""
+
+msgid "Near duplicates"
+msgstr ""
+
+msgid "Near duplicates (moved only with --tier near)"
+msgstr ""
+
+msgid ""
+"Near duplicates and bursts are in the HTML report; 'clean --tier near' "
+"moves near duplicates to the quarantine."
 msgstr ""
 
 msgid "Never analysed: e.g. a real backup that must remain a second copy."
@@ -649,6 +681,12 @@ msgstr ""
 msgid "Setting"
 msgstr ""
 
+msgid ""
+"Shots of one camera, taken seconds apart. This is not duplication: "
+"nothing here is ever cleaned. The sharpest shot of each series is "
+"suggested; the choice is yours."
+msgstr ""
+
 msgid "Show every setting, where it comes from, and the mount points."
 msgstr ""
 
@@ -695,6 +733,14 @@ msgstr ""
 msgid ""
 "The same folder is mounted twice: {folders}. Each of its files would look"
 " like a duplicate of itself."
+msgstr ""
+
+msgid ""
+"The same picture saved again: resized, recompressed or without its date. "
+"They are not identical files, so a plain 'clean' leaves them alone; "
+"'clean --tier near' moves the copies to the quarantine, where 'undo' "
+"finds them again. The highest resolution is kept. Compare each copy with "
+"the kept picture first."
 msgstr ""
 
 msgid "The whole plan as a spreadsheet (CSV): every group, every file"
@@ -816,6 +862,12 @@ msgstr ""
 msgid "environment"
 msgstr ""
 
+msgid ""
+"exact: delete byte-for-byte copies only. near: also move near duplicates "
+"(resized or recompressed copies) to the quarantine; check them in the "
+"report first."
+msgstr ""
+
 msgid "ffprobe not found: videos are not checked."
 msgstr ""
 
@@ -880,6 +932,12 @@ msgstr ""
 msgid "run"
 msgstr ""
 
+msgid "sharpest"
+msgstr ""
+
+msgid "sharpness"
+msgstr ""
+
 msgid "the file already exists"
 msgstr ""
 
@@ -906,6 +964,9 @@ msgid "the restored copy does not match the original"
 msgstr ""
 
 msgid "the shortest path"
+msgstr ""
+
+msgid "to the quarantine with --tier near"
 msgstr ""
 
 msgid "why:"
@@ -971,6 +1032,14 @@ msgstr ""
 
 #, python-format
 msgid "… and %(count)s more groups (largest files are shown first)."
+msgstr ""
+
+#, python-format
+msgid "… and %(count)s more groups."
+msgstr ""
+
+#, python-format
+msgid "… and %(count)s more series."
 msgstr ""
 
 #, python-brace-format

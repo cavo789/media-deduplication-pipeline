@@ -99,6 +99,8 @@ Folders sharing identical files
 | Extra copies that can be deleted | The files `clean` would delete. For every photo or video present several times, one copy is kept and the others are extra: a photo stored in 3 folders gives 2 extra copies. |
 | Space that can be freed | The total size of those extra copies. |
 | Broken files | Empty files (0 bytes) and files that cannot be opened (truncated JPEG, damaged video). `clean` deletes the empty ones and moves the others to the quarantine, never deleting them outright. |
+| Near duplicates | The same photo saved again: resized (WhatsApp), recompressed, rotated, or without its EXIF date. Not identical files: `clean` leaves them alone unless you add `--tier near`, see [below](#near-duplicates-and-bursts). |
+| Burst series | Shots of one camera taken seconds apart. Listed with the sharpest one suggested, never cleaned. |
 | Duration | How long the whole audit took. |
 
 Each sentence of *Folders sharing identical files* is a pair of folders holding the same files:
@@ -205,6 +207,34 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 **Update** — `docker pull cavo789/media-dedup` fetches the latest version; a tag such as
 `cavo789/media-dedup:0.1.1` pins one.
 
+### Near duplicates and bursts
+
+Besides exact copies, the audit looks at what each photo looks like (perceptual hashes,
+sharpness, EXIF date and camera), computed while it checks that the photo is readable, and
+remembered in the cache.
+
+- **Near duplicates**: the same photo saved again, smaller (WhatsApp, "reduced for email"),
+  recompressed, rotated or without its date. Every test must agree: nearly identical hashes,
+  the same shape, and the same shot date (or none on the smaller copy). Blank or black pictures
+  never count. The highest resolution is kept. The report shows each group side by side, with
+  the resolution, size and sharpness of every copy.
+- **Burst series**: shots of one camera, a few seconds apart, of the same scene. This is
+  curation, not duplication: they are only listed, the sharpest shot suggested. Nothing in a
+  series is ever cleaned, and a burst shot is never taken for a near duplicate.
+
+A plain `clean` never touches near duplicates. After checking them in the report, add
+`--tier near`: the copies are **moved to the quarantine** (they are not identical, so they
+cannot be rebuilt from the kept photo), and `undo` puts them back. `purge` deletes them for
+good. This needs the `/quarantine` mount:
+
+```powershell
+docker run --rm -it `
+  -v "C:\Photos:/data/c/Photos" `
+  -v "$HOME\media-dedup\journal:/journal" `
+  -v "$HOME\media-dedup\quarantine:/quarantine" `
+  cavo789/media-dedup clean --tier near
+```
+
 ## How it keeps your photos safe
 
 | Step | Guarantee |
@@ -216,6 +246,7 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 | Each action | Written to the journal *before* (`pending`) and *after* (`done`) it happens: an interruption never loses track. |
 | Duplicates | Really deleted (the space is freed immediately); `undo` rebuilds them from the kept copy, date included, even across disks. |
 | Unreadable files | Moved to the quarantine, never deleted outright; `purge` deletes them for good when you are sure. |
+| Near duplicates | Never touched by default. With `--tier near`, moved to the quarantine (never deleted) once checked: the kept photo still exists, the copy is the very file the audit saw. `undo` puts them back. |
 | Every group | Always keeps at least one copy. |
 
 ## Mount points
@@ -256,6 +287,7 @@ Global options go **before** the command: `media-dedup --locale fr audit`.
 | `--exclude PATH` | (`audit`, `clean`, `crosscheck`) Folder never analysed. |
 | `--ext EXT` | (`audit`, `clean`, `crosscheck`) Only analyse these extensions (`--ext png,webp`); all supported ones by default. |
 | `--yes`, `-y` | (`clean`, `purge`) Do not ask for confirmation. |
+| `--tier exact\|near` | (`clean`) `exact` (default): byte-for-byte copies only. `near`: also move [near duplicates](#near-duplicates-and-bursts) to the quarantine. |
 
 `media-dedup --help` and `media-dedup <command> --help` document everything, in both languages.
 
@@ -326,7 +358,8 @@ into a control character (the tool refuses such a path rather than ignoring it).
 - **Windows drives are slow through Docker**: the first audit reads every image and every
   file that shares its size with another one. With `-v media-dedup-cache:/cache` the next audits
   only read new or changed files. Tens of thousands of files take a few minutes just to be
-  listed: [every step shows its progress](#what-you-see-while-it-runs).
+  listed: [every step shows its progress](#what-you-see-while-it-runs). After an update to
+  0.1.1, the first audit decodes every photo once more, to describe what it looks like.
 - **Run with `-it`**: without a terminal, `clean` cannot ask for confirmation (use `--yes`) and
   colours are off.
 
@@ -345,7 +378,9 @@ two different files never share a SHA-256: the odds are far lower than those of 
 - **The name and the date do not matter.** `IMG_1234.jpg` and `Marie et Paul.jpg` with the same
   bytes are duplicates. Two `IMG_0001.jpg` with different content are not.
 - **Looking the same is not enough.** A resized, recompressed, rotated or re-tagged copy is a
-  different file: the tool leaves it alone.
+  different file. The audit lists it as a [near duplicate](#near-duplicates-and-bursts), but
+  `clean` leaves it alone unless you ask with `--tier near`, and then only moves it to the
+  quarantine.
 - **Only photos and videos** are analysed, recognised by their extension. Other files are
   ignored.
 

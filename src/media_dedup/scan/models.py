@@ -46,3 +46,29 @@ class BrokenFile:
     file: MediaFile
     reason: BrokenReason
     detail: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class VisualFacts:
+    """What an image looks like, for near duplicates, bursts and the sharpest shot.
+
+    Hashes are 64-bit perceptual fingerprints: close pictures differ by few bits.
+    `width` and `height` are the displayed size (EXIF orientation applied).
+    """
+
+    dhash: int
+    phash: int
+    width: int
+    height: int
+    sharpness: float
+    taken_at: str | None = None
+    camera: str | None = None
+
+    @property
+    def pixels(self) -> int:
+        """Displayed resolution, in pixels.
+
+        Returns:
+            Width times height.
+        """
+        return self.width * self.height

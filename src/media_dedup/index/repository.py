@@ -7,35 +7,18 @@ from typing import TYPE_CHECKING, Final, Self
 
 from media_dedup.constants import BrokenReason
 from media_dedup.index.facts import FileFacts
+from media_dedup.index.schema import SELECT, UPSERT, prepare
+from media_dedup.scan.models import VisualFacts
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from pathlib import Path
 
     from media_dedup.scan.models import MediaFile
 
-_SCHEMA_VERSION: Final = 1
 _IN_MEMORY: Final = ":memory:"
-_SCHEMA: Final = """
-CREATE TABLE IF NOT EXISTS files (
-    path TEXT PRIMARY KEY,
-    size INTEGER NOT NULL,
-    mtime_ns INTEGER NOT NULL,
-    partial_digest TEXT,
-    full_digest TEXT,
-    integrity_checked INTEGER NOT NULL DEFAULT 0,
-    broken_reason TEXT,
-    broken_detail TEXT NOT NULL DEFAULT ''
-)
-"""
-_SELECT: Final = (
-    "SELECT size, mtime_ns, partial_digest, full_digest, integrity_checked,"
-    " broken_reason, broken_detail FROM files WHERE path = ?"
-)
-_UPSERT: Final = (
-    "INSERT OR REPLACE INTO files (path, size, mtime_ns, partial_digest, full_digest,"
-    " integrity_checked, broken_reason, broken_detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-)
-_SIZE, _MTIME, _PARTIAL, _FULL, _CHECKED, _REASON, _DETAIL = range(7)
+_SIZE, _MTIME, _PARTIAL, _FULL, _CHECKED, _REASON, _DETAIL, _VISUAL = range(8)
+_HEX: Final = 16
 
 
 class FactsRepository:
@@ -48,8 +31,7 @@ class FactsRepository:
             connection: SQLite connection, owned by the repository from now on.
         """
         self._connection = connection
-        self._connection.execute(_SCHEMA)
-        self._connection.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
+        prepare(connection)
 
     @classmethod
     def open(cls, index_file: Path | None) -> Self:
@@ -90,7 +72,7 @@ class FactsRepository:
         Returns:
             The cached facts, or empty facts when unknown or stale.
         """
-        row = self._connection.execute(_SELECT, (str(file.path),)).fetchone()
+        row = self._connection.execute(SELECT, (str(file.path),)).fetchone()
         if row is None or (row[_SIZE], row[_MTIME]) != (file.size, file.mtime_ns):
             return FileFacts()
         reason = row[_REASON]
@@ -100,6 +82,8 @@ class FactsRepository:
             integrity_checked=bool(row[_CHECKED]),
             broken_reason=BrokenReason(reason) if reason is not None else None,
             broken_detail=row[_DETAIL],
+            visual_checked=bool(row[_VISUAL]),
+            visual=_visual_of(row[_VISUAL + 1 :]),
         )
 
     def put(self, file: MediaFile, facts: FileFacts) -> None:
@@ -119,5 +103,52 @@ class FactsRepository:
             int(facts.integrity_checked),
             reason,
             facts.broken_detail,
+            int(facts.visual_checked),
+            *_visual_row(facts.visual),
         )
-        self._connection.execute(_UPSERT, row)
+        self._connection.execute(UPSERT, row)
+
+
+def _visual_row(visual: VisualFacts | None) -> tuple[object, ...]:
+    """Flatten visual facts into the version 2 columns.
+
+    Args:
+        visual: The facts, or None.
+
+    Returns:
+        dhash, phash, width, height, sharpness, taken_at, camera.
+    """
+    if visual is None:
+        return (None,) * 7
+    return (
+        f"{visual.dhash:016x}",
+        f"{visual.phash:016x}",
+        visual.width,
+        visual.height,
+        visual.sharpness,
+        visual.taken_at,
+        visual.camera,
+    )
+
+
+def _visual_of(values: Sequence[object]) -> VisualFacts | None:
+    """Rebuild visual facts from the version 2 columns.
+
+    Args:
+        values: dhash, phash, width, height, sharpness, taken_at, camera.
+
+    Returns:
+        The facts, or None when the image has none.
+    """
+    dhash, phash, width, height, sharpness, taken_at, camera = values
+    if not isinstance(dhash, str) or not isinstance(phash, str):
+        return None
+    return VisualFacts(
+        dhash=int(dhash, _HEX),
+        phash=int(phash, _HEX),
+        width=int(str(width)),
+        height=int(str(height)),
+        sharpness=float(str(sharpness)),
+        taken_at=taken_at if isinstance(taken_at, str) else None,
+        camera=camera if isinstance(camera, str) else None,
+    )
