@@ -19,6 +19,21 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture(autouse=True)
+def plain_output(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Render every output as for a pipe, whatever the environment of the tests.
+
+    Typer forces terminal output (colours, 80-column panels) for its help when
+    `GITHUB_ACTIONS`, `FORCE_COLOR` or `PY_COLORS` is set, and Rich colours everything
+    under `FORCE_COLOR`: asserted texts would then depend on where the tests run.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+    """
+    monkeypatch.setattr("typer.rich_utils.FORCE_TERMINAL", False)
+    monkeypatch.delenv("FORCE_COLOR", raising=False)
+
+
+@pytest.fixture(autouse=True)
 def english() -> Iterator[None]:
     """Run every test in English, whatever a previous test installed."""
     install(Locale.EN)
