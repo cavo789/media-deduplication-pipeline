@@ -79,7 +79,7 @@ Voici un exemple sur un gros dossier de photos (noms de dossiers modifiés) :
 Résumé de l'audit
 ┌───────────────────────────────────────┬─────────────┐
 │ Fichiers média analysés               │      67.947 │
-│ Groupes de fichiers identiques        │      11.904 │
+│ Groupes de fichiers identiques        │      11.274 │
 │ Copies en trop, supprimables          │      12.633 │
 │ Espace libérable                      │     44,3 Go │
 │ Fichiers cassés (vides ou illisibles) │         180 │

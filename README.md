@@ -76,7 +76,7 @@ An example on a large photo folder (folder names changed):
 Audit summary
 ┌────────────────────────────────────┬─────────────┐
 │ Media files scanned                │      67,947 │
-│ Groups of identical files          │      11,904 │
+│ Groups of identical files          │      11,274 │
 │ Extra copies that can be deleted   │      12,633 │
 │ Space that can be freed            │     44.3 GB │
 │ Broken files (empty or unreadable) │         180 │
