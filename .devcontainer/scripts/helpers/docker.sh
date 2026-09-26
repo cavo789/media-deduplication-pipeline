@@ -1,6 +1,7 @@
 # .devcontainer/scripts/helpers/docker.sh
 #
-# Category "Docker image" — build the shipped image, inspect its layers, run the end-to-end tests.
+# Category "Docker image" — build the shipped image, inspect its layers, run the end-to-end tests,
+# release a version.
 #
 # Sourced by ../interactive.sh — no shebang, never executed directly.
 # shellcheck shell=bash
@@ -14,31 +15,38 @@ function build() {
 }
 
 # @cat Docker image
-# @cmd push
-# @desc Build + publish to Docker Hub (latest, version)
-function push() {
-    # The namespace is overridable so a fork can publish under its own Docker Hub account.
-    local -r repository="${DOCKER_HUB_NAMESPACE:-cavo789}/media-dedup"
-    local version
-    version="$(sed -n 's/^version = "\(.*\)"$/\1/p' "$(_repo_root)/pyproject.toml")"
-    if [[ -z "${version}" ]]; then
-        printf "❌ Cannot read the version from pyproject.toml\n" >&2
-        return 1
-    fi
-
-    build || return 1
-
-    local tag
-    for tag in latest "${version}"; do
-        docker tag media-dedup:latest "${repository}:${tag}" || return 1
-        printf "🚀 Pushing %s:%s...\n" "${repository}" "${tag}"
-        if ! docker push "${repository}:${tag}"; then
-            printf "❌ Push failed — log in first with: docker login --username %s\n" \
-                "${repository%%/*}" >&2
+# @cmd release
+# @desc Tag vX.Y.Z (pyproject version) and push it: CI publishes the image
+function release() {
+    (
+        cd "$(_repo_root)" || return 1
+        local version
+        version="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)"
+        if [[ -z "${version}" ]]; then
+            printf "❌ Cannot read the version from pyproject.toml\n" >&2
             return 1
         fi
-    done
-    printf "✅ Published https://hub.docker.com/r/%s\n" "${repository}"
+        local -r tag="v${version}"
+
+        if [[ -n "$(git status --porcelain)" ]]; then
+            printf "❌ Uncommitted changes: commit them first, the tag must match main\n" >&2
+            return 1
+        fi
+        if git rev-parse --quiet --verify "refs/tags/${tag}" >/dev/null; then
+            printf "❌ %s already exists: bump the version in pyproject.toml first\n" "${tag}" >&2
+            return 1
+        fi
+        git fetch --quiet origin main || return 1
+        if [[ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]]; then
+            printf "❌ HEAD is not origin/main: push main (or pull) first\n" >&2
+            return 1
+        fi
+
+        # CI builds amd64 + arm64, runs the end-to-end tests, then pushes :<version> and :latest.
+        git tag --annotate "${tag}" --message "media-dedup ${version}" || return 1
+        git push origin "${tag}" || return 1
+        printf "✅ %s pushed: follow the publication in the repository's Actions tab\n" "${tag}"
+    )
 }
 
 # @cat Docker image

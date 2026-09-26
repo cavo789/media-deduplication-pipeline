@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "media-deduplication-pipeline"
-version = "0.1.0"
+version = "0.1.1"
 description = "Find and safely clean duplicate photos and videos across folders and disks."
 readme = "README.md"
 requires-python = ">=3.14"

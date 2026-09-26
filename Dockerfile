@@ -39,7 +39,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # --- runtime: the interpreter, the virtual environment and ffprobe — nothing else ---------
 FROM ${PYTHON_IMAGE} AS runtime
 
-ARG VERSION=0.1.0
+ARG VERSION=0.1.1
 ARG APP_UID=1000
 ARG APP_GID=1000
 

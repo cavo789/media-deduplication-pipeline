@@ -37,7 +37,7 @@ export -f check
 export -f format
 export -f tests
 export -f build
-export -f push
+export -f release
 export -f dive
 export -f dive_ci
 export -f e2e
