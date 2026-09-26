@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
+from media_dedup.constants import MediaKind
 from media_dedup.plan.similar_models import SimilarFindings
 
 if TYPE_CHECKING:
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
     from media_dedup.constants import KeepReason
     from media_dedup.plan.similar_models import NearDecision
     from media_dedup.scan.models import BrokenFile, DuplicateGroup, MediaFile
+    from media_dedup.scan.sidecars import Sidecar
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +48,7 @@ class CleanPlan:
     broken: tuple[BrokenFile, ...]
     protected_broken: tuple[BrokenFile, ...] = ()
     near: tuple[NearDecision, ...] = ()
+    sidecars: tuple[Sidecar, ...] = ()
 
     @property
     def removable_count(self) -> int:
@@ -55,6 +58,19 @@ class CleanPlan:
             The count.
         """
         return sum(len(decision.removable) for decision in self.decisions)
+
+    @property
+    def moved_copies(self) -> int:
+        """Number of copies of other files (not media), moved rather than deleted.
+
+        Returns:
+            The count.
+        """
+        return sum(
+            file.kind is MediaKind.OTHER
+            for decision in self.decisions
+            for file in decision.removable
+        )
 
     @property
     def reclaimable(self) -> int:
@@ -79,9 +95,12 @@ class CleanPlan:
         """Tell whether there is nothing to clean.
 
         Returns:
-            True when no duplicate copy, near duplicate or broken file is actionable.
+            True when no duplicate copy, near duplicate, broken file or orphan
+            sidecar is actionable.
         """
-        return not self.removable_count and not self.broken and not self.near_count
+        return not (
+            self.removable_count or self.broken or self.near_count or self.orphans
+        )
 
     @property
     def near_count(self) -> int:
@@ -91,6 +110,27 @@ class CleanPlan:
             The count.
         """
         return sum(len(decision.removable) for decision in self.near)
+
+    @property
+    def orphans(self) -> tuple[MediaFile, ...]:
+        """Sidecars the plan leaves without any file of their name: moved too.
+
+        Returns:
+            Their files, in the order of `sidecars`.
+        """
+        removed = self.removed
+        return tuple(s.file for s in self.sidecars if s.is_orphan_without(removed))
+
+    @property
+    def removed(self) -> frozenset[Path]:
+        """Files the plan deletes or moves, sidecars aside.
+
+        Returns:
+            Their paths.
+        """
+        exact = {file.path for group in self.decisions for file in group.removable}
+        near = {file.path for group in self.near for file in group.removable}
+        return frozenset(exact | near | {item.file.path for item in self.broken})
 
 
 @dataclass(frozen=True, slots=True)

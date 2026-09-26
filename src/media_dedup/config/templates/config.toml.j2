@@ -42,7 +42,7 @@ excluded = []
 
 
 [scan]
-{{ comment(_('Only analyse these extensions, e.g. ["png", "webp"]. Empty: every supported one (media-dedup audit --help lists them).'), "--ext") }}
+{{ comment(_('Only analyse these extensions, e.g. ["png", "webp"]. Empty: every photo, RAW and video extension (media-dedup audit --help lists them). Other types are allowed, such as ["pdf", "docx"]: their copies are moved to the quarantine, never deleted.'), "--ext") }}
 extensions = []
 
 

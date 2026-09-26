@@ -117,6 +117,14 @@ class BrokenSection:
 
 
 @dataclass(frozen=True, slots=True)
+class OrphansSection:
+    """Sidecars left without their photo, moved to the quarantine by `clean`."""
+
+    paths: tuple[str, ...] = ()
+    hidden: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class IncidentsSection:
     """Files a clean skipped (on purpose) or failed on."""
 
@@ -134,13 +142,21 @@ class GroupsSection:
 
 
 @dataclass(frozen=True, slots=True)
-class ReportView:
-    """The full report."""
+class ReportHeader:
+    """What the report is about: its headline numbers and the folders analysed."""
 
     summary: ReportSummary
     roots: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ReportView:
+    """The full report."""
+
+    header: ReportHeader
     pairs: tuple[FolderPairView, ...]
     groups: GroupsSection
     similar: SimilarSection
     broken: BrokenSection
     incidents: IncidentsSection
+    orphans: OrphansSection = field(default_factory=OrphansSection)

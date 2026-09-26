@@ -65,7 +65,7 @@ class ReportWriter:
             )
         plan = record.findings.plan
         write_plan_csv(folder / PLAN_CSV_FILE_NAME, plan, self.mapper)
-        summary_json = view.summary.model_dump_json(indent=2)
+        summary_json = view.header.summary.model_dump_json(indent=2)
         (folder / SUMMARY_FILE_NAME).write_text(summary_json, encoding="utf-8")
         write_index(self.reports_dir)
         return target

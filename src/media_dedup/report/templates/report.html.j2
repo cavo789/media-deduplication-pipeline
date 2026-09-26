@@ -1,9 +1,10 @@
 {% extends "base.html.j2" %}
-{% set s = report.summary %}
+{% set s = report.header.summary %}
 {% set is_clean = s.kind.value == "clean" %}
 {% set reasons = {
   "empty": _("Empty file (0 bytes)"),
   "unreadable-image": _("Image cannot be decoded"),
+  "unreadable-raw": _("RAW file cannot be decoded"),
   "unreadable-video": _("Video cannot be opened"),
 } %}
 {% block title %}{{ _("media-dedup report") }} — {{ s.folder }}{% endblock %}
@@ -22,7 +23,7 @@
 {% block content %}
 <h1>🧹 {{ _("Clean report") if is_clean else _("Audit report") }}</h1>
 <p class="muted">{{ s.created_at.strftime("%Y-%m-%d %H:%M") }} UTC{% if s.run_id %} · {{ _("run") }} {{ s.run_id }}{% endif %}</p>
-<p>{{ _("Folders analysed:") }} {% for root in report.roots %}<code>{{ root }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+<p>{{ _("Folders analysed:") }} {% for root in report.header.roots %}<code>{{ root }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</p>
 
 <div class="cards">
   <div class="card"><div class="value">{{ s.files_scanned | number }}</div><div class="label">{{ _("media files scanned") }}</div></div>
@@ -123,7 +124,16 @@
 {% endfor %}
 {% endif %}
 
-{% if not report.groups.largest and not report.broken.handled %}
+{% if report.orphans.paths %}
+<h2>🏷️ {{ _("Orphan sidecar files") }}</h2>
+<p class="muted">{{ _("Sidecars (.xmp, .aae, .thm) hold the metadata or edits of the photo of the same name, next to them. These ones have no such file left: they are moved to the quarantine, never deleted outright. A sidecar next to its photo is never touched.") }}</p>
+<ul class="files">
+  {% for path in report.orphans.paths %}<li class="remove">🏷️ {{ path }}</li>{% endfor %}
+</ul>
+{% if report.orphans.hidden %}<p class="muted">{{ _("… and %(count)s more (the CSV lists them all).", count=report.orphans.hidden | number) }}</p>{% endif %}
+{% endif %}
+
+{% if not report.groups.largest and not report.broken.handled and not report.orphans.paths %}
 <p class="note">🎉 {{ _("Nothing to clean: no duplicate and no broken file.") }}</p>
 {% endif %}
 <p class="muted"><a href="../index.html">← {{ _("All reports") }}</a></p>

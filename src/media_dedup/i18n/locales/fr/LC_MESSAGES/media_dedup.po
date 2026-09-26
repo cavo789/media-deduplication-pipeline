@@ -216,6 +216,11 @@ msgstr ""
 "Les copies trouvées dans ces dossiers sont gardées en priorité, dans cet "
 "ordre."
 
+msgid "Copies of other files than media go to /quarantine: mount it."
+msgstr ""
+"Les copies des fichiers autres que des médias vont dans /quarantine : "
+"montez-le."
+
 #, python-brace-format
 msgid "Czkawka agrees: the same {copies} extra copies in {groups} groups."
 msgstr ""
@@ -375,11 +380,11 @@ msgstr ""
 " les dossiers avec :ro."
 
 msgid ""
-"Finds broken files: empty (0 bytes), images that cannot be decoded, "
-"videos that cannot be opened."
+"Finds broken files: empty (0 bytes), images and RAW files that cannot be "
+"decoded, videos that cannot be opened."
 msgstr ""
-"Repère les fichiers cassés : vides (0 octet), images impossibles à "
-"décoder, vidéos impossibles à ouvrir."
+"Repère les fichiers cassés : vides (0 octet), images et fichiers RAW "
+"impossibles à décoder, vidéos impossibles à ouvrir."
 
 msgid "Folder"
 msgstr "Dossier"
@@ -593,10 +598,12 @@ msgstr "Pas de montage /journal : rien à annuler."
 msgid "No journal mount: without a journal, 'undo' would be impossible."
 msgstr "Pas de montage /journal : sans journal, 'undo' serait impossible."
 
-msgid "No quarantine mount: unreadable files are left in place."
-msgstr ""
-"Pas de montage /quarantine : les fichiers illisibles sont laissés en "
+msgid ""
+"No quarantine mount: unreadable files and orphan sidecars are left in "
 "place."
+msgstr ""
+"Pas de montage /quarantine : les fichiers illisibles et les fichiers "
+"compagnons orphelins sont laissés en place."
 
 msgid "No report yet: run 'media-dedup audit'."
 msgstr "Aucun rapport pour l'instant : lancez 'media-dedup audit'."
@@ -607,6 +614,14 @@ msgstr "Pas de montage /reports : aucun rapport à lister."
 msgid "Not cross-checked: 'media-dedup crosscheck' compares with Czkawka."
 msgstr "Pas de second avis : 'media-dedup crosscheck' compare avec Czkawka."
 
+#, python-brace-format
+msgid ""
+"Not photos or videos: {extensions}. These files are only compared byte "
+"for byte, and their copies are moved to the quarantine."
+msgstr ""
+"Ni photos ni vidéos : {extensions}. Ces fichiers sont seulement comparés "
+"octet par octet, et leurs copies sont déplacées en quarantaine."
+
 msgid "Nothing to clean: no duplicate and no broken file."
 msgstr "Rien à nettoyer : aucun doublon et aucun fichier cassé."
 
@@ -616,18 +631,25 @@ msgstr "Rien n'a été modifié."
 #, python-brace-format
 msgid ""
 "Only analyse files with these extensions, e.g. --ext png,webp "
-"(repeatable). Default: every supported extension: {extensions}."
+"(repeatable). Other types too, such as --ext pdf,docx: their copies are "
+"moved to the quarantine. Default: every photo, RAW and video extension: "
+"{extensions}."
 msgstr ""
 "N'analyse que les fichiers ayant ces extensions, p. ex. --ext png,webp "
-"(répétable). Par défaut : toutes les extensions prises en charge : "
-"{extensions}."
+"(répétable). D'autres types aussi, comme --ext pdf,docx : leurs copies "
+"sont déplacées en quarantaine. Par défaut : toutes les extensions des "
+"photos, RAW et vidéos : {extensions}."
 
 msgid ""
 "Only analyse these extensions, e.g. [\"png\", \"webp\"]. Empty: every "
-"supported one (media-dedup audit --help lists them)."
+"photo, RAW and video extension (media-dedup audit --help lists them). "
+"Other types are allowed, such as [\"pdf\", \"docx\"]: their copies are "
+"moved to the quarantine, never deleted."
 msgstr ""
 "N'analyser que ces extensions, p. ex. [\"png\", \"webp\"]. Vide : toutes "
-"celles prises en charge (media-dedup audit --help les liste)."
+"celles des photos, RAW et vidéos (media-dedup audit --help les liste). "
+"D'autres types sont permis, comme [\"pdf\", \"docx\"] : leurs copies sont"
+" déplacées en quarantaine, jamais supprimées."
 
 msgid ""
 "Only files of the same size can be identical: their first and last 64 KB "
@@ -647,6 +669,15 @@ msgstr ""
 
 msgid "Origin"
 msgstr "Origine"
+
+msgid "Orphan sidecar files"
+msgstr "Fichiers compagnons orphelins"
+
+msgid "Orphan sidecar: no file of the same name left next to it"
+msgstr "Fichier compagnon orphelin : plus aucun fichier du même nom à côté de lui"
+
+msgid "Orphan sidecars (.xmp, .aae, .thm) to move"
+msgstr "Fichiers compagnons orphelins (.xmp, .aae, .thm) à déplacer"
 
 msgid "Output (override general.* of config.toml)"
 msgstr "Affichage (remplace general.* de config.toml)"
@@ -687,6 +718,9 @@ msgstr "Quarantaine vidée : {size} libérés."
 
 msgid "Quarantined"
 msgstr "En quarantaine"
+
+msgid "RAW file cannot be decoded"
+msgstr "Fichier RAW impossible à décoder"
 
 msgid "Random sample"
 msgstr "Échantillon aléatoire"
@@ -830,6 +864,17 @@ msgstr "Affiche chaque réglage, son origine, et les points de montage."
 msgid "Show the version and exit."
 msgstr "Affiche la version et quitte."
 
+msgid ""
+"Sidecars (.xmp, .aae, .thm) hold the metadata or edits of the photo of "
+"the same name, next to them. These ones have no such file left: they are "
+"moved to the quarantine, never deleted outright. A sidecar next to its "
+"photo is never touched."
+msgstr ""
+"Les fichiers compagnons (.xmp, .aae, .thm) gardent les métadonnées ou les"
+" retouches de la photo du même nom, posée à côté d'eux. Ceux-ci n'ont "
+"plus un tel fichier : ils sont déplacés en quarantaine, jamais supprimés "
+"directement. Un fichier compagnon à côté de sa photo n'est jamais touché."
+
 msgid "Size"
 msgstr "Taille"
 
@@ -838,6 +883,14 @@ msgstr "Taille (octets)"
 
 msgid "Skipped (left untouched)"
 msgstr "Ignorés (laissés intacts)"
+
+msgid ""
+"Software folders (.git, node_modules, AppData, Program Files, ...) are "
+"skipped: there, where a file lies makes a program work."
+msgstr ""
+"Les dossiers de logiciels (.git, node_modules, AppData, Program Files, "
+"...) sont ignorés : là, c'est l'endroit où se trouve un fichier qui fait "
+"fonctionner un programme."
 
 msgid "Space"
 msgstr "Espace"
@@ -961,6 +1014,9 @@ msgstr "[yellow]non monté[/] — rien à analyser"
 
 msgid "a file changed since the audit"
 msgstr "un fichier a changé depuis l'audit"
+
+msgid "a file with the same name is still next to it"
+msgstr "un fichier du même nom est toujours à côté de lui"
 
 msgid "a folder someone named (the other one is generic)"
 msgstr "un dossier nommé par quelqu'un (l'autre est générique)"
@@ -1141,6 +1197,20 @@ msgstr "oui"
 
 #, python-brace-format
 msgid ""
+"{count} copy of another file than a media will be moved to the "
+"quarantine, not deleted."
+msgid_plural ""
+"{count} copies of other files than media will be moved to the quarantine,"
+" not deleted."
+msgstr[0] ""
+"{count} copie d'un fichier autre qu'un média sera déplacée en "
+"quarantaine, pas supprimée."
+msgstr[1] ""
+"{count} copies de fichiers autres que des médias seront déplacées en "
+"quarantaine, pas supprimées."
+
+#, python-brace-format
+msgid ""
 "{count} file is both in {kept} (kept) and in {removed} (deleted), {size} "
 "freed."
 msgid_plural ""
@@ -1184,6 +1254,18 @@ msgstr[1] ""
 "{path} est {same_as}."
 
 #, python-brace-format
+msgid "{count} orphan sidecar (.xmp, .aae, .thm) will be moved to the quarantine."
+msgid_plural ""
+"{count} orphan sidecars (.xmp, .aae, .thm) will be moved to the "
+"quarantine."
+msgstr[0] ""
+"{count} fichier compagnon orphelin (.xmp, .aae, .thm) sera déplacé en "
+"quarantaine."
+msgstr[1] ""
+"{count} fichiers compagnons orphelins (.xmp, .aae, .thm) seront déplacés "
+"en quarantaine."
+
+#, python-brace-format
 msgid "{count} report deleted."
 msgid_plural "{count} reports deleted."
 msgstr[0] "{count} rapport supprimé."
@@ -1206,6 +1288,10 @@ msgid "{removed} holds nothing else: it is entirely a copy of {kept}."
 msgstr ""
 "{removed} ne contient rien d'autre : c'est entièrement une copie de "
 "{kept}."
+
+#, python-format
+msgid "… and %(count)s more (the CSV lists them all)."
+msgstr "… et %(count)s de plus (le CSV les liste tous)."
 
 #, python-format
 msgid "… and %(count)s more groups (largest files are shown first)."

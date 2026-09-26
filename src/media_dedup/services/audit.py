@@ -6,6 +6,7 @@ import asyncio
 import shutil
 import time
 from collections import Counter
+from dataclasses import replace
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
@@ -15,6 +16,7 @@ from media_dedup.i18n import _
 from media_dedup.index.repository import FactsRepository
 from media_dedup.paths.mount_kind import MountKind
 from media_dedup.plan.models import AuditFindings
+from media_dedup.plan.orphans import sidecars_in_scope
 from media_dedup.plan.planner import build_plan
 from media_dedup.plan.similar import SimilarInputs, find_similar
 from media_dedup.scan.aliases import unique_files
@@ -22,14 +24,16 @@ from media_dedup.scan.broken import BrokenFileFinder, IntegrityFindings
 from media_dedup.scan.deps import IntegrityTools, ScanDeps
 from media_dedup.scan.exact import ExactDuplicateFinder
 from media_dedup.scan.progress import Step
-from media_dedup.scan.walker import walk
+from media_dedup.scan.walker import Walk, walk
 from media_dedup.services.data_checks import (
     refuse_overlapping_mounts,
     warn_about_aliases,
+    warn_about_scope,
 )
-from media_dedup.services.policy import keep_policy, scan_filters, unmounted_folders
+from media_dedup.services.policy import keep_policy, scan_filters
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from pathlib import Path
 
     from media_dedup.scan.models import DuplicateGroup, MediaFile
@@ -51,7 +55,7 @@ class AuditService:
         self._progress = progress
 
     def run(self) -> AuditFindings:
-        """List media files, find broken files and exact duplicates, plan the clean.
+        """List media files, find broken files, exact duplicates and orphan sidecars.
 
         Returns:
             The findings and the plan.
@@ -68,47 +72,59 @@ class AuditService:
                 _('Mount your folders, e.g. -v "C:\\Photos:/data/c/Photos:ro".'),
             )
         refuse_overlapping_mounts(runtime)
-        _warn_about_scope(runtime)
+        warn_about_scope(runtime)
         roots = runtime.mounts.data_roots(data_dir)
-        files = self._list_files(roots)
+        found = self._list_files(roots)
         ffprobe = shutil.which(FFPROBE_BINARY)
         if ffprobe is None:
             runtime.output.warning(_("ffprobe not found: videos are not checked."))
-        index_file = runtime.locations.index_file
-        persistent = runtime.persistent(MountKind.CACHE)
         with (
-            FactsRepository.open(index_file if persistent else None) as repository,
+            FactsRepository.open(self._index_file()) as repository,
             runtime.executor_factory() as executor,
         ):
             deps = ScanDeps(repository, self._progress)
             groups, integrity = asyncio.run(
                 _analyse(
-                    files,
+                    found.files,
                     BrokenFileFinder(deps, IntegrityTools(executor, ffprobe)),
                     ExactDuplicateFinder(deps),
                 ),
             )
         policy = keep_policy(runtime.settings, runtime.mapper)
+        plan = build_plan(groups, integrity.broken, policy)
+        folder_files = Counter(file.path.parent for file in found.files)
         return AuditFindings(
-            files_scanned=len(files),
+            files_scanned=len(found.files),
             roots=roots,
-            plan=build_plan(groups, integrity.broken, policy),
+            plan=replace(plan, sidecars=found.sidecars),
             seconds=time.monotonic() - started,
-            folder_files=MappingProxyType(Counter(file.path.parent for file in files)),
+            folder_files=MappingProxyType(folder_files),
             groups=groups,
             similar=find_similar(
-                SimilarInputs(files, integrity.visuals, groups), policy
+                SimilarInputs(found.files, integrity.visuals, groups), policy
             ),
         )
 
-    def _list_files(self, roots: tuple[Path, ...]) -> list[MediaFile]:
+    def _index_file(self) -> Path | None:
+        """Return the index file, when the cache is mounted to keep it.
+
+        Returns:
+            Its path, or None for an index in memory.
+        """
+        runtime = self._runtime
+        if runtime.persistent(MountKind.CACHE):
+            return runtime.locations.index_file
+        return None
+
+    def _list_files(self, roots: tuple[Path, ...]) -> Walk:
         """Walk every root, without listing a file twice (nested mounts, hard links).
 
         Args:
             roots: Mounted folders.
 
         Returns:
-            The media files, by path.
+            The media files, by path, and the sidecars `clean` may move (outside
+            protected folders; without an extension filter, the lone ones too).
         """
         filters = scan_filters(self._runtime.settings, self._runtime.mapper)
         step = Step(
@@ -121,34 +137,18 @@ class AuditService:
         self._progress.start(step, None)
         found = asyncio.run(walk(roots, filters, self._progress))
         self._progress.stop()
-        unique = unique_files(found)
+        unique = unique_files(found.files)
         warn_about_aliases(self._runtime, unique.aliases)
-        return list(unique.files)
-
-
-def _warn_about_scope(runtime: Runtime) -> None:
-    """Warn when part of the data is left out: unmounted folders, extension filter.
-
-    Args:
-        runtime: Settings, mount points and output.
-    """
-    for folder in unmounted_folders(runtime.settings.folders, runtime.mapper):
-        runtime.output.warning(
-            _("Configured folder {path} is not mounted: it is ignored.").format(
-                path=folder
-            ),
-        )
-    extensions = runtime.settings.scan.extensions
-    if extensions:
-        runtime.output.warning(
-            _("Only these extensions are analysed: {extensions}.").format(
-                extensions=", ".join(extensions)
-            ),
+        runtime = self._runtime
+        policy = keep_policy(runtime.settings, runtime.mapper)
+        alone = not runtime.settings.scan.extensions
+        return Walk(
+            unique.files, sidecars_in_scope(found.sidecars, policy, alone=alone)
         )
 
 
 async def _analyse(
-    files: list[MediaFile],
+    files: Sequence[MediaFile],
     broken_finder: BrokenFileFinder,
     exact_finder: ExactDuplicateFinder,
 ) -> tuple[tuple[DuplicateGroup, ...], IntegrityFindings]:

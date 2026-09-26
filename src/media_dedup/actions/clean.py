@@ -1,43 +1,32 @@
-"""Execute a plan: delete exact copies, quarantine near ones, handle broken files."""
+"""Execute a plan: delete exact copies, quarantine near ones, broken files, orphans."""
 
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from functools import partial
 from typing import TYPE_CHECKING
 
-from media_dedup.actions.journal import JournalEntry
+from media_dedup.actions.journaled import JournaledChanges
 from media_dedup.actions.outcome import Incident, Outcome, Tally
-from media_dedup.actions.quarantine import move_verified
-from media_dedup.actions.verify import change_blocker, near_blocker, removal_blocker
-from media_dedup.constants import ActionKind, BrokenReason, Phase, Status
+from media_dedup.actions.verify import (
+    change_blocker,
+    near_blocker,
+    orphan_blocker,
+    removal_blocker,
+)
+from media_dedup.constants import ActionKind, BrokenReason, MediaKind
 from media_dedup.i18n import _
-from media_dedup.scan.hashing import full_digest
 from media_dedup.scan.progress import Step
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
 
-    from media_dedup.actions.journal import JournalWriter
-    from media_dedup.paths.host_paths import HostPathMapper
+    from media_dedup.actions.journaled import CleanContext
     from media_dedup.plan.models import CleanPlan, KeepDecision
     from media_dedup.plan.similar_models import NearDecision
     from media_dedup.scan.models import BrokenFile, MediaFile
-    from media_dedup.scan.progress import ProgressSink
 
 _LOGGER = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True, slots=True)
-class CleanContext:
-    """Where and how a clean run acts."""
-
-    journal: JournalWriter
-    mapper: HostPathMapper
-    quarantine_run_dir: Path
-    progress: ProgressSink
 
 
 class CleanExecutor:
@@ -51,7 +40,7 @@ class CleanExecutor:
         """
         self._context = context
         self._tally = Tally()
-        self._seq = 0
+        self._changes = JournaledChanges(context, self._tally)
 
     def run(self, plan: CleanPlan) -> Outcome:
         """Execute every action of the plan.
@@ -70,7 +59,7 @@ class CleanExecutor:
             ),
         )
         total = plan.removable_count + plan.near_count + len(plan.broken)
-        self._context.progress.start(step, total)
+        self._context.progress.start(step, total + len(plan.orphans))
         for decision in plan.decisions:
             for file in decision.removable:
                 self._guarded(file, partial(self._delete_copy, decision, file))
@@ -79,6 +68,9 @@ class CleanExecutor:
                 self._guarded(file, partial(self._quarantine_near, near, file))
         for item in plan.broken:
             self._guarded(item.file, partial(self._handle_broken, item))
+        # Last: a sidecar is an orphan only once the files it belongs to are gone.
+        for file in plan.orphans:
+            self._guarded(file, partial(self._quarantine_orphan, file))
         self._context.progress.stop()
         return self._tally.freeze()
 
@@ -100,6 +92,9 @@ class CleanExecutor:
     def _delete_copy(self, decision: KeepDecision, file: MediaFile) -> None:
         """Delete one duplicate copy after a byte-for-byte check against the keeper.
 
+        A copy of another file than a media (asked for with `--ext`) is moved to the
+        quarantine instead: where a document lies may matter to a program.
+
         Args:
             decision: The group decision, holding the keeper.
             file: Copy to delete.
@@ -108,10 +103,14 @@ class CleanExecutor:
         if blocker is not None:
             self._tally.skipped.append(Incident(file.path, blocker))
             return
-        entry = self._entry(file, ActionKind.DELETE_DUPLICATE).model_copy(
+        if file.kind is MediaKind.OTHER:
+            keeper = decision.keeper.path
+            self._changes.quarantine(file, ActionKind.QUARANTINE_DUPLICATE, keeper)
+            return
+        entry = self._changes.entry(file, ActionKind.DELETE_DUPLICATE).model_copy(
             update={"sha256": decision.digest, "keeper": str(decision.keeper.path)},
         )
-        self._act(entry, file.path.unlink)
+        self._changes.act(entry, file.path.unlink)
 
     def _quarantine_near(self, decision: NearDecision, file: MediaFile) -> None:
         """Move one near duplicate to the quarantine, where `undo` finds it again.
@@ -124,29 +123,7 @@ class CleanExecutor:
         if blocker is not None:
             self._tally.skipped.append(Incident(file.path, blocker))
             return
-        self._quarantine(file, ActionKind.QUARANTINE_NEAR, decision.keeper.path)
-
-    def _quarantine(
-        self, file: MediaFile, action: ActionKind, keeper: Path | None = None
-    ) -> None:
-        """Move a file to this run's quarantine, journaled.
-
-        Args:
-            file: File to move.
-            action: Why it is moved.
-            keeper: The picture kept instead, when there is one.
-        """
-        path = file.path
-        target = self._context.quarantine_run_dir / self._context.mapper.relative(path)
-        entry = self._entry(file, action).model_copy(
-            update={
-                "quarantine": str(target),
-                "sha256": full_digest(path),
-                "keeper": str(keeper) if keeper else None,
-            },
-        )
-        self._act(entry, lambda: move_verified(path, target))
-        self._tally.quarantined += 1
+        self._changes.quarantine(file, ActionKind.QUARANTINE_NEAR, decision.keeper.path)
 
     def _handle_broken(self, item: BrokenFile) -> None:
         """Delete an empty file, or move an unreadable one to the quarantine.
@@ -159,42 +136,19 @@ class CleanExecutor:
             self._tally.skipped.append(Incident(item.file.path, blocker))
             return
         if item.reason is BrokenReason.EMPTY:
-            entry = self._entry(item.file, ActionKind.DELETE_EMPTY)
-            self._act(entry, item.file.path.unlink)
+            entry = self._changes.entry(item.file, ActionKind.DELETE_EMPTY)
+            self._changes.act(entry, item.file.path.unlink)
             return
-        self._quarantine(item.file, ActionKind.QUARANTINE)
+        self._changes.quarantine(item.file, ActionKind.QUARANTINE)
 
-    def _entry(self, file: MediaFile, action: ActionKind) -> JournalEntry:
-        """Build the `pending` journal entry of an action.
-
-        Args:
-            file: File acted upon.
-            action: What is about to happen.
-
-        Returns:
-            The entry, with the next sequence number.
-        """
-        self._seq += 1
-        return JournalEntry(
-            seq=self._seq,
-            phase=Phase.CLEAN,
-            status=Status.PENDING,
-            action=action,
-            path=str(file.path),
-            host_path=self._context.mapper.to_host(file.path),
-            size=file.size,
-            mtime_ns=file.mtime_ns,
-        )
-
-    def _act(self, entry: JournalEntry, action: Callable[[], object]) -> None:
-        """Journal `pending`, act, then journal `done`.
+    def _quarantine_orphan(self, sidecar: MediaFile) -> None:
+        """Move an orphan sidecar to the quarantine, where `undo` finds it again.
 
         Args:
-            entry: The pending entry.
-            action: Zero-argument callable performing the change.
+            sidecar: The sidecar, as audited.
         """
-        self._context.journal.record(entry)
-        action()
-        self._context.journal.record(entry.as_done())
-        self._tally.done += 1
-        self._tally.bytes_done += entry.size
+        blocker = orphan_blocker(sidecar)
+        if blocker is not None:
+            self._tally.skipped.append(Incident(sidecar.path, blocker))
+            return
+        self._changes.quarantine(sidecar, ActionKind.QUARANTINE_SIDECAR)

@@ -10,7 +10,7 @@ from media_dedup.console.formatting import human_number, human_size
 from media_dedup.console.progress import RichProgress
 from media_dedup.console.tables import findings_table, folder_pairs_view
 from media_dedup.errors import CrossCheckError, MediaDedupError
-from media_dedup.i18n import _
+from media_dedup.i18n import _, ngettext
 from media_dedup.services.audit import AuditService
 from media_dedup.services.crosscheck import cross_check
 from media_dedup.services.reporting import write_report
@@ -122,6 +122,24 @@ def confirm_clean(runtime: Runtime, plan: CleanPlan, yes: bool) -> bool:  # noqa
             "Delete {count} duplicate copies ({size}) and handle {broken} broken files?"
         )
     )
+    if plan.moved_copies:
+        moved = ngettext(
+            "{count} copy of another file than a media will be moved to the "
+            "quarantine, not deleted.",
+            "{count} copies of other files than media will be moved to the "
+            "quarantine, not deleted.",
+            plan.moved_copies,
+        )
+        runtime.output.info(moved.format(count=human_number(plan.moved_copies)))
+    if plan.orphans:
+        orphans = ngettext(
+            "{count} orphan sidecar (.xmp, .aae, .thm) will be moved to the "
+            "quarantine.",
+            "{count} orphan sidecars (.xmp, .aae, .thm) will be moved to the "
+            "quarantine.",
+            len(plan.orphans),
+        )
+        runtime.output.info(orphans.format(count=human_number(len(plan.orphans))))
     return runtime.output.confirm(
         question.format(
             count=human_number(plan.removable_count),

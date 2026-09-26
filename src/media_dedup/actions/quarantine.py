@@ -13,7 +13,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 # Actions undone by moving the file back from the quarantine.
-QUARANTINED: Final = frozenset({ActionKind.QUARANTINE, ActionKind.QUARANTINE_NEAR})
+QUARANTINED: Final = frozenset(
+    {ActionKind.QUARANTINE, ActionKind.QUARANTINE_NEAR}
+    | {ActionKind.QUARANTINE_DUPLICATE, ActionKind.QUARANTINE_SIDECAR},
+)
 
 
 def move_verified(source: Path, target: Path) -> None:

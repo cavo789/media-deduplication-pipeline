@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final
 
-from media_dedup.constants import BrokenReason, Locale
+from media_dedup.constants import BrokenReason, Locale, MediaKind
 from media_dedup.i18n import _, active_locale
 from media_dedup.report.reasons import keep_reason_label
 
@@ -34,7 +34,7 @@ _DATE_FORMAT: Final = "%Y-%m-%d %H:%M:%S"
 
 
 def write_plan_csv(target: Path, plan: CleanPlan, mapper: HostPathMapper) -> None:
-    """Write every file of the plan, group by group, then the broken files.
+    """Write every file of the plan: group by group, the broken files, the orphans.
 
     Args:
         target: The CSV file to write.
@@ -59,6 +59,11 @@ def write_plan_csv(target: Path, plan: CleanPlan, mapper: HostPathMapper) -> Non
         )
         writer.writerows(rows.duplicates(plan))
         writer.writerows(rows.broken(plan))
+        orphan = _Line(
+            _("move to the quarantine"),
+            detail=_("Orphan sidecar: no file of the same name left next to it"),
+        )
+        writer.writerows(rows.row(file, orphan) for file in plan.orphans)
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,11 +95,13 @@ class _Rows:
             group, digest = str(number), decision.digest
             reason = keep_reason_label(decision.reason)
             keep = _Line(_("keep"), group, digest, reason)
-            yield self._row(decision.keeper, keep)
+            yield self.row(decision.keeper, keep)
             for file in decision.removable:
-                yield self._row(file, _Line(_("delete"), group, digest))
+                moved = file.kind is MediaKind.OTHER
+                action = _("move to the quarantine") if moved else _("delete")
+                yield self.row(file, _Line(action, group, digest))
             for file in decision.protected:
-                yield self._row(file, _Line(_("protected, kept"), group, digest))
+                yield self.row(file, _Line(_("protected, kept"), group, digest))
 
     def broken(self, plan: CleanPlan) -> Iterator[Row]:
         """One row per broken file, handled or left alone in a protected folder.
@@ -108,12 +115,21 @@ class _Rows:
         for item in plan.broken:
             empty = item.reason is BrokenReason.EMPTY
             action = _("delete") if empty else _("move to the quarantine")
-            yield self._row(item.file, _Line(action, detail=_describe(item)))
+            yield self.row(item.file, _Line(action, detail=_describe(item)))
         for item in plan.protected_broken:
             line = _Line(_("protected, kept"), detail=_describe(item))
-            yield self._row(item.file, line)
+            yield self.row(item.file, line)
 
-    def _row(self, file: MediaFile, line: _Line) -> Row:
+    def row(self, file: MediaFile, line: _Line) -> Row:
+        """One row: what the plan does to a file, and why.
+
+        Args:
+            file: The file.
+            line: The action, its group and details.
+
+        Returns:
+            The row, in host paths.
+        """
         modified = datetime.fromtimestamp(file.mtime_ns / _NANOSECONDS, UTC)
         return (
             line.group,
@@ -139,6 +155,7 @@ def _describe(item: BrokenFile) -> str:
     reasons = {
         BrokenReason.EMPTY: _("Empty file (0 bytes)"),
         BrokenReason.UNREADABLE_IMAGE: _("Image cannot be decoded"),
+        BrokenReason.UNREADABLE_RAW: _("RAW file cannot be decoded"),
         BrokenReason.UNREADABLE_VIDEO: _("Video cannot be opened"),
     }
     reason = reasons[item.reason]

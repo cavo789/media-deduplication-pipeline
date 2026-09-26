@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import filecmp
+import os
 from typing import TYPE_CHECKING
 
 from media_dedup.i18n import _
+from media_dedup.scan.sidecars import companions_of
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -74,4 +76,26 @@ def change_blocker(file: MediaFile) -> str | None:
     stat = file.path.stat()
     if (stat.st_size, stat.st_mtime_ns) != (file.size, file.mtime_ns):
         return _("a file changed since the audit")
+    return None
+
+
+def orphan_blocker(sidecar: MediaFile) -> str | None:
+    """Explain why a sidecar must not be moved, or return None when it is an orphan.
+
+    The files it belongs to must be gone: a copy the clean skipped, or a file added
+    since the audit, still needs it.
+
+    Args:
+        sidecar: The sidecar, as audited.
+
+    Returns:
+        The translated reason to skip it, or None.
+    """
+    blocker = change_blocker(sidecar)
+    if blocker is not None:
+        return blocker
+    with os.scandir(sidecar.path.parent) as entries:
+        names = [entry.name for entry in entries if not entry.is_dir()]
+    if companions_of(sidecar.path, names):
+        return _("a file with the same name is still next to it")
     return None

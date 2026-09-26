@@ -1,4 +1,4 @@
-"""List every media file below the data roots, without following symbolic links.
+"""List every media file and sidecar below the data roots, without following links.
 
 Folders are read concurrently: on a Windows drive seen through Docker, each directory
 listing waits for a slow round trip, so several are kept in flight at once.
@@ -13,9 +13,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from media_dedup.constants import Sizes
-from media_dedup.scan.filters import media_kind
+from media_dedup.constants import MediaKind, Sizes
 from media_dedup.scan.models import FileIdentity, MediaFile
+from media_dedup.scan.sidecars import Sidecar, companions_of, is_sidecar
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -27,22 +27,32 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
+class Walk:
+    """What the walk found below the roots, in no fixed order."""
+
+    files: tuple[MediaFile, ...] = ()
+    sidecars: tuple[Sidecar, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class _Listing:
-    """What one folder holds: its media files and the subfolders to visit."""
+    """What one folder holds: its media files, its sidecars, the subfolders to visit."""
 
     files: tuple[MediaFile, ...] = ()
     folders: tuple[Path, ...] = ()
+    sidecars: tuple[Sidecar, ...] = ()
 
 
 async def walk(
     roots: Iterable[Path],
     filters: ScanFilters,
     progress: ProgressSink,
-) -> list[MediaFile]:
-    """Return the media files below `roots`, as `filters` allows, in no fixed order.
+) -> Walk:
+    """Return the media files and sidecars below `roots`, as `filters` allows.
 
     Unreadable folders are logged and skipped: one bad folder never stops the scan.
     Nested or overlapping roots list their files twice: see `unique_files`.
+    Sidecars are listed whatever the extension filter: they follow their photo.
 
     Args:
         roots: Folders to walk.
@@ -50,9 +60,10 @@ async def walk(
         progress: Advanced once per media file found.
 
     Returns:
-        Every media file found.
+        Every media file and sidecar found.
     """
-    found: list[MediaFile] = []
+    files: list[MediaFile] = []
+    sidecars: list[Sidecar] = []
     visits: list[asyncio.Task[None]] = []
     slots = asyncio.Semaphore(Sizes.IO_CONCURRENCY)
     async with asyncio.TaskGroup() as group:
@@ -60,13 +71,14 @@ async def walk(
         async def visit(folder: Path) -> None:
             async with slots:
                 listing = await asyncio.to_thread(_list_folder, folder, filters)
-            found.extend(listing.files)
+            files.extend(listing.files)
+            sidecars.extend(listing.sidecars)
             for _file in listing.files:
                 progress.advance()
             visits.extend(group.create_task(visit(sub)) for sub in listing.folders)
 
         visits.extend(group.create_task(visit(root)) for root in roots)
-    return found
+    return Walk(tuple(files), tuple(sidecars))
 
 
 def _list_folder(folder: Path, filters: ScanFilters) -> _Listing:
@@ -77,7 +89,8 @@ def _list_folder(folder: Path, filters: ScanFilters) -> _Listing:
         filters: Folders to skip and extensions to keep.
 
     Returns:
-        Its media files and the subfolders to visit; nothing when it cannot be read.
+        Its media files, sidecars and the subfolders to visit; nothing when it cannot
+        be read.
     """
     try:
         with os.scandir(folder) as entries:
@@ -87,29 +100,55 @@ def _list_folder(folder: Path, filters: ScanFilters) -> _Listing:
         return _Listing()
     files: list[MediaFile] = []
     folders: list[Path] = []
+    sidecars: list[os.DirEntry[str]] = []
     for entry in items:
         path = Path(entry.path)
         if entry.is_dir(follow_symlinks=False):
             if not filters.skips_dir(path):
                 folders.append(path)
             continue
-        media = _media_file(entry, path) if filters.accepts(path) else None
+        if is_sidecar(entry.name):
+            sidecars.append(entry)
+            continue
+        media = _describe(entry, filters.kind_of(path))
         if media is not None:
             files.append(media)
-    return _Listing(tuple(files), tuple(folders))
+    return _Listing(tuple(files), tuple(folders), _sidecars(sidecars, items))
 
 
-def _media_file(entry: os.DirEntry[str], path: Path) -> MediaFile | None:
-    """Describe a directory entry when it is a regular media file.
+def _sidecars(
+    entries: list[os.DirEntry[str]], items: list[os.DirEntry[str]]
+) -> tuple[Sidecar, ...]:
+    """Describe the sidecars of a folder, with the files each one belongs to.
+
+    Args:
+        entries: The sidecar entries of the folder.
+        items: Every entry of the folder.
+
+    Returns:
+        The sidecars that are regular files.
+    """
+    if not entries:
+        return ()
+    names = [item.name for item in items if not item.is_dir(follow_symlinks=False)]
+    return tuple(
+        Sidecar(file, companions_of(file.path, names))
+        for file in (_describe(entry, MediaKind.SIDECAR) for entry in entries)
+        if file is not None
+    )
+
+
+def _describe(entry: os.DirEntry[str], kind: MediaKind | None) -> MediaFile | None:
+    """Describe a directory entry when it is a regular file the walk keeps.
 
     Args:
         entry: The directory entry (its stat is cached by `scandir`).
-        path: Its path.
+        kind: What the file is, or None when the walk does not keep it.
 
     Returns:
-        The media file, or None for anything else.
+        The file, or None for anything else (a link, a device, another extension).
     """
-    kind = media_kind(path)
+    path = Path(entry.path)
     if kind is None or not entry.is_file(follow_symlinks=False):
         return None
     try:

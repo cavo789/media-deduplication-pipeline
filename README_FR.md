@@ -22,12 +22,13 @@ Ce qu'elle fait :
 - **Doublons exacts** : même taille et même SHA-256, comparés à nouveau octet par octet juste
   avant toute suppression. Détectés entre dossiers *et* entre disques (`C:` et `D:` dans la même
   exécution).
-- **Fichiers cassés** : fichiers vides, images impossibles à décoder (JPEG tronqué, …), vidéos
-  impossibles à ouvrir.
+- **Fichiers cassés** : fichiers vides, images et fichiers RAW impossibles à décoder (JPEG
+  tronqué, …), vidéos impossibles à ouvrir.
 - **Réversible** : chaque action est journalisée ; `undo` reconstruit chaque copie supprimée à
   partir de la copie conservée, et ressort chaque fichier de la quarantaine.
-- **Jamais touchés** : les rafales et photos « similaires », les fichiers compagnons (`.xmp`,
-  `.aae`, `.thm`), les dossiers protégés.
+- **Fichiers compagnons orphelins** : un fichier compagnon (`.xmp`, `.aae`, `.thm`) resté sans
+  sa photo est déplacé en quarantaine ; celui qui accompagne sa photo n'est jamais touché.
+- **Jamais touchés** : les rafales et photos « similaires », les dossiers protégés.
 
 ## Sommaire
 
@@ -61,11 +62,11 @@ Chaque étape affiche une ligne de progression et, en dessous en gris, ce qu'ell
 
 | À l'écran | Ce que l'étape fait réellement |
 |---|---|
-| Recherche des fichiers médias | Parcourt tous les dossiers montés et garde les photos, fichiers RAW et vidéos, [reconnus à leur extension](#aller-plus-loin). Les autres fichiers (`.xmp`, documents, …) sont ignorés. Le total n'est pas encore connu : un compteur remplace la barre. |
-| Vérification de la lisibilité des fichiers | Repère les fichiers cassés : vides (0 octet), images impossibles à décoder (chacune est décodée entièrement, un processus par cœur), vidéos que `ffprobe` ne peut pas ouvrir. Les fichiers RAW sont seulement vérifiés comme non vides. |
+| Recherche des fichiers médias | Parcourt tous les dossiers montés et garde les photos, fichiers RAW et vidéos, [reconnus à leur extension](#aller-plus-loin). Les fichiers compagnons (`.xmp`, `.aae`, `.thm`) sont notés avec les fichiers du même nom à côté d'eux. Les autres fichiers (documents, …) sont ignorés, sauf si [`--ext` les demande](#autres-types-de-fichiers). Le total n'est pas encore connu : un compteur remplace la barre. |
+| Vérification de la lisibilité des fichiers | Repère les fichiers cassés : vides (0 octet), images impossibles à décoder (chacune est décodée entièrement, un processus par cœur), fichiers RAW que LibRaw ne peut pas décoder (chaque pixel est lu), vidéos que `ffprobe` ne peut pas ouvrir. Les autres types de fichiers demandés avec `--ext` ne sont pas vérifiés. |
 | Comparaison des fichiers de même taille | Deux fichiers ne peuvent être identiques que s'ils ont la même taille. Pour ceux-là, lit leurs premiers et derniers 64 Ko : rapide, et cela en écarte la plupart. |
 | Preuve d'identité (SHA-256 complet) | Lit entièrement les candidats restants et calcule leur empreinte SHA-256 : même empreinte, même contenu, octet par octet. L'étape la plus longue avec de grosses vidéos. |
-| Nettoyage (`clean`) | Recompare chaque copie, octet par octet, avec celle gardée juste avant de la supprimer ; supprime les fichiers vides ; déplace les illisibles en quarantaine ; journalise chaque action. |
+| Nettoyage (`clean`) | Recompare chaque copie, octet par octet, avec celle gardée juste avant de la supprimer ; supprime les fichiers vides ; déplace les illisibles et les [fichiers compagnons orphelins](#fichiers-compagnons) en quarantaine ; journalise chaque action. |
 | Restauration (`undo`) | Recrée chaque copie supprimée à partir de celle gardée (date comprise) et ramène les fichiers mis en quarantaine. |
 
 Une étape sans travail est sautée : avec le volume `/cache`, les fichiers déjà vérifiés ou
@@ -97,11 +98,12 @@ Dossiers partageant des fichiers identiques
 
 | Ligne | Ce qu'elle veut dire |
 |---|---|
-| Fichiers média analysés | Toutes les photos et vidéos trouvées. Les autres fichiers (`.xmp`, documents, …) sont ignorés. |
+| Fichiers média analysés | Toutes les photos, fichiers RAW et vidéos trouvés, plus les fichiers des [autres types](#autres-types-de-fichiers) demandés avec `--ext`. Les fichiers compagnons (`.xmp`, …) ne sont pas comptés. |
 | Groupes de fichiers identiques | Combien de photos ou vidéos distinctes existent en plusieurs copies identiques. D'autres outils, comme Czkawka, comptent les mêmes groupes : un chiffre pratique pour comparer. |
 | Copies en trop, supprimables | Les fichiers que `clean` supprimerait. Pour chaque photo ou vidéo présente plusieurs fois, un exemplaire est gardé et les autres sont en trop : une photo rangée dans 3 dossiers donne 2 copies en trop. |
 | Espace libérable | La taille totale de ces copies en trop. |
-| Fichiers cassés | Les fichiers vides (0 octet) et ceux qui ne s'ouvrent pas (JPEG tronqué, vidéo abîmée). `clean` supprime les vides et déplace les autres en quarantaine, sans jamais les supprimer directement. |
+| Fichiers cassés | Les fichiers vides (0 octet) et ceux qui ne s'ouvrent pas (JPEG ou fichier RAW tronqué, vidéo abîmée). `clean` supprime les vides et déplace les autres en quarantaine, sans jamais les supprimer directement. |
+| Fichiers compagnons orphelins | Les [fichiers compagnons](#fichiers-compagnons) (`.xmp`, `.aae`, `.thm`) sans plus aucun fichier du même nom à côté d'eux une fois `clean` passé. Déplacés en quarantaine. |
 | Quasi-doublons | La même photo enregistrée à nouveau : réduite (WhatsApp), recompressée, pivotée, ou sans sa date EXIF. Ce ne sont pas des fichiers identiques : `clean` n'y touche pas, sauf si vous ajoutez `--tier near`, voir [plus bas](#quasi-doublons-et-rafales). |
 | Rafales | Des photos d'un même appareil prises à quelques secondes d'intervalle. Listées avec la plus nette suggérée, jamais nettoyées. |
 | Durée | Le temps qu'a pris tout l'audit. |
@@ -127,12 +129,14 @@ même un espace).
 **Seulement certains types de fichiers** : `--ext` limite l'analyse à certaines extensions,
 répétable ou séparées par des virgules (`--ext png,webp` ; la casse et le point initial
 n'importent pas). `[scan] extensions` dans `config.toml` fait de même. L'audit indique alors les
-extensions analysées. Extensions prises en charge (`media-dedup audit --help` les liste aussi) :
+extensions analysées. Les extensions des médias, analysées par défaut (`media-dedup audit
+--help` les liste aussi), sont ci-dessous ; [d'autres types](#autres-types-de-fichiers)
+(`--ext pdf`) sont possibles, avec plus de précautions.
 
 | Type | Extensions |
 |---|---|
 | Images | avif, bmp, gif, heic, heif, jpe, jpeg, jpg, png, tif, tiff, webp |
-| RAW | arw, cr2, cr3, dng, nef, orf, pef, raf, rw2, srw |
+| RAW (décodés par LibRaw, aperçu tiré du JPEG intégré par l'appareil) | arw, cr2, cr3, dng, nef, orf, pef, raf, rw2, srw |
 | Vidéos | 3g2, 3gp, avi, flv, m2ts, m4v, mkv, mov, mp4, mpeg, mpg, mts, ts, webm, wmv |
 
 ```powershell
@@ -173,7 +177,8 @@ copie, ligne par ligne : le fichier gardé et le fichier identique supprimé.
 SHA-256, taille, action, chemin, date), sans limite. Il s'ouvre directement dans Excel, accents
 compris (séparateur `;` en français).
 Le rapport explique aussi *comment on sait que ce sont des doublons*, montre un échantillon
-aléatoire de groupes de photos, et donne pour chaque groupe son SHA-256 avec une commande
+aléatoire de groupes de photos (fichiers RAW compris, grâce à l'aperçu intégré par
+l'appareil), et donne pour chaque groupe son SHA-256 avec une commande
 *Vérifiez vous-même* : collez-la dans PowerShell (`Get-FileHash`) pour voir la même empreinte
 pour chaque copie, sans devoir croire media-dedup sur parole.
 
@@ -245,6 +250,69 @@ docker run --rm -it `
   cavo789/media-dedup clean --tier near
 ```
 
+### Fichiers compagnons
+
+Les fichiers compagnons (*sidecars*) sont de petits fichiers posés à côté d'une photo ou d'une
+vidéo, qui en gardent les métadonnées ou les retouches : `.xmp` (Lightroom, digiKam,
+darktable), `.aae` (retouches de l'iPhone), `.thm` (vignettes des caméscopes). Un fichier
+compagnon appartient aux fichiers de son dossier qui portent le même nom : `IMG_1.xmp` à
+`IMG_1.jpg` ou `IMG_1.CR2`, et `IMG_1.CR2.xmp` à `IMG_1.CR2`, sans tenir compte de la casse.
+
+- **À côté de sa photo**, un fichier compagnon n'est jamais touché.
+- **Orphelin** : une fois que `clean` a supprimé ou déplacé tous les fichiers du même nom à
+  côté de lui (ou s'il n'y en avait déjà aucun), un fichier compagnon ne sert plus à rien.
+  `clean` le déplace en quarantaine, sans jamais le supprimer, après avoir vérifié qu'aucun
+  fichier du même nom n'est revenu. `undo` le remet en place ; `purge` le supprime
+  définitivement. Sans le montage `/quarantine`, les orphelins restent en place.
+- **Avec `--ext`**, l'audit ne regarde qu'une partie des fichiers : les fichiers compagnons
+  déjà seuls avant le nettoyage restent où ils sont, seuls ceux que le nettoyage lui-même
+  laisse seuls sont déplacés.
+- **Les dossiers protégés** ne sont jamais modifiés, fichiers compagnons compris.
+
+Le fichier compagnon d'une copie supprimée n'est pas déplacé à côté de la copie gardée. Pour
+garder une photo *avec* ses retouches, assurez-vous que c'est cette copie-là qui est gardée :
+indiquez son dossier dans `--prefer`.
+
+### Autres types de fichiers
+
+media-dedup est fait pour les photos et les vidéos : sans `--ext`, rien d'autre n'est
+analysé. `--ext` (ou `[scan] extensions`) accepte aussi d'autres extensions, par exemple pour
+trouver les documents en double d'un dossier familial :
+
+```powershell
+docker run --rm -it `
+  -v "C:\Users\Moi\Documents:/data/c/Users/Moi/Documents" `
+  -v "$HOME\media-dedup\journal:/journal" `
+  -v "$HOME\media-dedup\quarantine:/quarantine" `
+  cavo789/media-dedup --locale fr clean --ext pdf,docx
+```
+
+Ces fichiers sont traités avec plus de précautions que les photos. Pour une photo, le dossier
+n'est qu'une façon de ranger ; pour un document ou un programme, **l'endroit où se trouve le
+fichier peut être ce qui le fait fonctionner** : un `LICENSE`, un `__init__.py` ou un modèle
+identique dans deux projets est normal, et supprimer « la copie » casse l'un d'eux.
+
+- **Seulement comparés**, octet par octet : jamais décodés (les images passent par Pillow, les
+  fichiers RAW par LibRaw, les vidéos par `ffprobe` ; les autres types n'ont aucune
+  vérification), pas d'aperçu, pas de quasi-doublons. Un fichier vide n'est jamais « cassé » :
+  ce peut être un marqueur dont un programme a besoin.
+- **Leurs copies sont déplacées en quarantaine**, jamais supprimées : `clean` refuse de
+  s'exécuter sans le montage `/quarantine`. `undo` les remet en place ; `purge` les supprime
+  définitivement.
+- **Les dossiers de logiciels sont ignorés** : `.git`, `.hg`, `.svn`, `node_modules`,
+  `.venv`, `venv`, `site-packages`, `__pycache__`, `AppData`, `ProgramData`, `Program Files`,
+  `Program Files (x86)` et `Windows`, quelle que soit leur casse.
+- **Une faute de frappe n'est pas refusée** : `--ext jpgg` est une extension valable, qui ne
+  correspond simplement à rien. L'audit nomme les extensions qui ne sont ni des photos ni des
+  vidéos : lisez cet avertissement.
+- **Les fichiers compagnons** (`.xmp`, `.aae`, `.thm`) ne peuvent pas être demandés : ils
+  [suivent leur photo](#fichiers-compagnons).
+- **`--ext` limite toujours l'analyse** : `--ext jpg,pdf` analyse les photos JPEG et les
+  documents PDF, pas les fichiers RAW ni les vidéos.
+
+Montez les dossiers qui contiennent vos documents, jamais un disque entier ni `C:\Users` :
+les programmes et leurs données s'y trouvent aussi.
+
 ## Comment vos photos restent en sécurité
 
 | Étape | Garantie |
@@ -257,6 +325,8 @@ docker run --rm -it `
 | Doublons | Réellement supprimés (l'espace est libéré tout de suite) ; `undo` les reconstruit depuis la copie conservée, date comprise, même d'un disque à l'autre. |
 | Fichiers illisibles | Déplacés en quarantaine, jamais supprimés directement ; `purge` les supprime définitivement quand vous êtes sûr·e. |
 | Quasi-doublons | Jamais touchés par défaut. Avec `--tier near`, déplacés en quarantaine (jamais supprimés) après vérification : la photo gardée existe toujours, la copie est bien le fichier vu par l'audit. `undo` les remet en place. |
+| Autres types de fichiers | Seulement s'ils sont demandés avec `--ext` : [leurs copies](#autres-types-de-fichiers) sont déplacées en quarantaine (jamais supprimées), et les dossiers de logiciels (`.git`, `node_modules`, `AppData`, …) sont ignorés. |
+| Fichiers compagnons | Jamais touchés à côté de leur photo. Un orphelin est déplacé en quarantaine (jamais supprimé) après vérification : inchangé depuis l'audit, et aucun fichier du même nom à côté de lui. `undo` le remet en place. |
 | Chaque groupe | Garde toujours au moins une copie. |
 
 ## Points de montage
@@ -266,7 +336,7 @@ docker run --rm -it `
 | `/data/<lecteur>/<chemin>` | Les dossiers à analyser (`C:\Photos` → `/data/c/Photos`). | toujours ; `:ro` pour `audit` |
 | `/config` | `config.toml` uniquement, créé et commenté au premier lancement. | facultatif |
 | `/journal` | Un journal JSONL par nettoyage. | **obligatoire** pour `clean`, `undo`, `history` |
-| `/quarantine` | Fichiers illisibles mis de côté par `clean`. | s'il y a des fichiers cassés |
+| `/quarantine` | Fichiers illisibles, fichiers compagnons orphelins, quasi-doublons et copies d'autres types de fichiers mis de côté par `clean`. | pour les traiter |
 | `/reports` | Un dossier par exécution (`report.html`, une page par paire de dossiers, vignettes, `plan.csv`) et `index.html`. | facultatif |
 | `/cache` | Index SQLite : les audits suivants ne relisent que les fichiers nouveaux ou modifiés. | facultatif, recommandé |
 
@@ -278,7 +348,7 @@ Chaque montage manquant est expliqué par une astuce 💡. L'image fonctionne au
 | Commande | Rôle |
 |---|---|
 | `audit` | Trouve les doublons exacts et les fichiers cassés. N'écrit jamais dans `/data`. |
-| `clean` | Audite, demande confirmation, puis supprime les copies en double et les fichiers vides, et met les fichiers illisibles en quarantaine. |
+| `clean` | Audite, demande confirmation, puis supprime les copies en double et les fichiers vides, et met les fichiers illisibles et les fichiers compagnons orphelins en quarantaine. |
 | `undo [EXÉCUTION]` | Restaure chaque fichier d'un nettoyage (le plus récent par défaut). |
 | `history` | Liste les nettoyages : fichiers supprimés, espace libéré, quarantaine, restaurations. |
 | `reports [--prune N]` | Liste les rapports et régénère `index.html` ; `--prune N` garde les N plus récents. |
@@ -296,7 +366,7 @@ Les options globales se placent **avant** la commande : `media-dedup --locale fr
 | `--prefer CHEMIN` | (`audit`, `clean`, `crosscheck`) Dossier dont les copies sont conservées en priorité ; répétable, l'ordre compte. |
 | `--protect CHEMIN` | (`audit`, `clean`, `crosscheck`) Dossier jamais modifié ; ses fichiers sont les copies conservées. |
 | `--exclude CHEMIN` | (`audit`, `clean`, `crosscheck`) Dossier jamais analysé. |
-| `--ext EXT` | (`audit`, `clean`, `crosscheck`) N'analyse que ces extensions (`--ext png,webp`) ; toutes celles prises en charge par défaut. |
+| `--ext EXT` | (`audit`, `clean`, `crosscheck`) N'analyse que ces extensions (`--ext png,webp`) ; toutes celles des photos, RAW et vidéos par défaut. [D'autres types](#autres-types-de-fichiers) aussi (`--ext pdf,docx`). |
 | `--yes`, `-y` | (`clean`, `purge`) Ne pas demander de confirmation. |
 | `--tier exact\|near` | (`clean`) `exact` (par défaut) : seulement les copies identiques octet par octet. `near` : déplace aussi les [quasi-doublons](#quasi-doublons-et-rafales) en quarantaine. |
 
@@ -340,7 +410,7 @@ protected = []
 excluded = ['D:\backup']
 
 [scan]
-extensions = []       # p. ex. ["png", "webp"] ; vide : toutes les extensions prises en charge
+extensions = []       # p. ex. ["png", "webp"] ou ["pdf"] ; vide : photos, RAW et vidéos
 
 [keep]                 # en commentaire : listes intégrées ('media-dedup config' les affiche)
 # generated_names = ['IMG_\d+', 'DSC\d+']   # noms générés par les appareils et applications
@@ -357,7 +427,8 @@ confirm = true
 - **`excluded`** : jamais analysés. À utiliser pour une vraie sauvegarde qui doit rester une
   seconde copie.
 - **`extensions`** : [seuls ces types de fichiers](#aller-plus-loin) sont
-  analysés.
+  analysés ; [d'autres types](#autres-types-de-fichiers) que les photos et vidéos sont
+  permis.
 - **`generated_names`**, **`generic_folders`** : expressions régulières portant sur un nom de
   fichier entier (sans extension) ou un nom de dossier, sans tenir compte de la casse. Entre
   copies identiques, un nom ou un dossier qui correspond vaut moins :
@@ -404,8 +475,9 @@ qu'une erreur de disque.
   métadonnées ont changé est un autre fichier. L'audit la liste comme
   [quasi-doublon](#quasi-doublons-et-rafales), mais `clean` n'y touche pas, sauf si vous le
   demandez avec `--tier near`, et alors il la déplace seulement en quarantaine.
-- **Seules les photos et vidéos** sont analysées, reconnues par leur extension. Les autres
-  fichiers sont ignorés.
+- **Seuls les photos, fichiers RAW et vidéos** sont analysés, reconnus par leur extension.
+  Les autres fichiers seulement si vous [les demandez](#autres-types-de-fichiers) avec
+  `--ext`, et leurs copies sont alors déplacées en quarantaine, jamais supprimées.
 
 ### Ce que l'outil vérifie avant de supprimer
 

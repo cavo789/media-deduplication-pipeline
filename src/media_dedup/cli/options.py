@@ -161,7 +161,9 @@ def extensions() -> OptionInfo:
             "--ext",
             help=_(
                 "Only analyse files with these extensions, e.g. --ext png,webp "
-                "(repeatable). Default: every supported extension: {extensions}."
+                "(repeatable). Other types too, such as --ext pdf,docx: their copies "
+                "are moved to the quarantine. Default: every photo, RAW and video "
+                "extension: {extensions}."
             ).format(extensions=supported_extensions()),
             rich_help_panel=_panel_scan(),
             show_default=False,

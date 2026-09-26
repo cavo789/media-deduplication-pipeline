@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 def listed(root: Path, filters: ScanFilters) -> list[MediaFile]:
     """Walk `root` and return its media files, sorted by path."""
     found = asyncio.run(walk((root,), filters, NullProgress()))
-    return sorted(found, key=lambda file: file.path)
+    return sorted(found.files, key=lambda file: file.path)
 
 
 @pytest.mark.parametrize(
@@ -112,3 +112,15 @@ def test_walk_reaches_every_level_of_many_folders(tmp_path: Path) -> None:
         (folder / f"{index}.jpg").write_bytes(b"x")
         expected.append(folder / f"{index}.jpg")
     assert [file.path for file in listed(tmp_path, ScanFilters())] == sorted(expected)
+
+
+def test_other_files_are_kept_only_when_asked(tmp_path: Path) -> None:
+    """Media by default; `.pdf` when asked, and then software folders are skipped."""
+    media_only, with_pdf = ScanFilters(), ScanFilters(extensions=frozenset({".pdf"}))
+    assert media_only.kind_of(tmp_path / "a.JPG") is MediaKind.IMAGE
+    assert media_only.kind_of(tmp_path / "a.pdf") is None
+    assert with_pdf.kind_of(tmp_path / "a.PDF") is MediaKind.OTHER
+    assert with_pdf.kind_of(tmp_path / "a.jpg") is None
+    assert not media_only.skips_dir(tmp_path / "node_modules")
+    assert with_pdf.skips_dir(tmp_path / "Program Files")
+    assert with_pdf.skips_dir(tmp_path / "$RECYCLE.BIN")

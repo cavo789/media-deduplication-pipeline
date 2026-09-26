@@ -20,12 +20,13 @@ What it does:
 
 - **Exact duplicates** — same size and same SHA-256, compared again byte for byte right before
   any deletion. Found across folders *and* disks (`C:` and `D:` in the same run).
-- **Broken files** — empty files, images that cannot be decoded (truncated JPEG, …), videos that
-  cannot be opened.
+- **Broken files** — empty files, images and RAW files that cannot be decoded (truncated JPEG,
+  …), videos that cannot be opened.
 - **Reversible** — every action is journaled; `undo` restores every deleted copy from the copy
   that was kept, and every quarantined file from the quarantine.
-- **Never touched** — bursts and "similar" photos, sidecar files (`.xmp`, `.aae`, `.thm`),
-  protected folders.
+- **Orphan sidecars** — a sidecar file (`.xmp`, `.aae`, `.thm`) left without its photo is
+  moved to the quarantine; one next to its photo is never touched.
+- **Never touched** — bursts and "similar" photos, protected folders.
 
 ## Contents
 
@@ -58,11 +59,11 @@ Each step shows one line of progress and, below it in grey, what it really does:
 
 | On screen | What it really does |
 |---|---|
-| Listing media files | Walks through every mounted folder and keeps the photos, RAW files and videos, [recognised by their extension](#going-further). Other files (`.xmp`, documents, …) are ignored. The total is not known yet: a running count replaces the bar. |
-| Checking that files can be read | Finds broken files: empty ones (0 bytes), images that cannot be decoded (each one is decoded in full, one process per CPU), videos that `ffprobe` cannot open. RAW files are only checked for emptiness. |
+| Listing media files | Walks through every mounted folder and keeps the photos, RAW files and videos, [recognised by their extension](#going-further). Sidecars (`.xmp`, `.aae`, `.thm`) are noted with the files of the same name next to them. Other files (documents, …) are ignored, unless [`--ext` asks for them](#other-file-types). The total is not known yet: a running count replaces the bar. |
+| Checking that files can be read | Finds broken files: empty ones (0 bytes), images that cannot be decoded (each one is decoded in full, one process per CPU), RAW files that LibRaw cannot decode (every pixel is unpacked), videos that `ffprobe` cannot open. Other file types asked for with `--ext` are not checked. |
 | Comparing files of equal size | Two files can only be identical if they have the same size. For those, reads their first and last 64 KB: quick, and it rules most of them out. |
 | Proving identity (full SHA-256) | Reads the remaining candidates in full and computes their SHA-256 fingerprint: same fingerprint, same content, byte for byte. The longest step with large videos. |
-| Cleaning (`clean`) | Compares each copy again, byte for byte, with the kept one right before deleting it; deletes empty files; moves unreadable ones to the quarantine; journals every action. |
+| Cleaning (`clean`) | Compares each copy again, byte for byte, with the kept one right before deleting it; deletes empty files; moves unreadable ones and [orphan sidecars](#sidecar-files) to the quarantine; journals every action. |
 | Restoring (`undo`) | Rebuilds each deleted copy from the kept one (date included) and brings quarantined files back. |
 
 A step with nothing to do is skipped: with the `/cache` volume, files already checked or hashed
@@ -94,11 +95,12 @@ Folders sharing identical files
 
 | Line | What it means |
 |---|---|
-| Media files scanned | Every photo and video found. Other files (`.xmp`, documents, …) are ignored. |
+| Media files scanned | Every photo, RAW file and video found, plus the files of the [other types](#other-file-types) asked for with `--ext`. Sidecars (`.xmp`, …) are not counted. |
 | Groups of identical files | How many distinct photos or videos exist in several identical copies. Other tools, such as Czkawka, count the same groups: a handy number to compare. |
 | Extra copies that can be deleted | The files `clean` would delete. For every photo or video present several times, one copy is kept and the others are extra: a photo stored in 3 folders gives 2 extra copies. |
 | Space that can be freed | The total size of those extra copies. |
-| Broken files | Empty files (0 bytes) and files that cannot be opened (truncated JPEG, damaged video). `clean` deletes the empty ones and moves the others to the quarantine, never deleting them outright. |
+| Broken files | Empty files (0 bytes) and files that cannot be opened (truncated JPEG or RAW file, damaged video). `clean` deletes the empty ones and moves the others to the quarantine, never deleting them outright. |
+| Orphan sidecars | [Sidecar files](#sidecar-files) (`.xmp`, `.aae`, `.thm`) with no file of the same name left next to them once `clean` has run. Moved to the quarantine. |
 | Near duplicates | The same photo saved again: resized (WhatsApp), recompressed, rotated, or without its EXIF date. Not identical files: `clean` leaves them alone unless you add `--tier near`, see [below](#near-duplicates-and-bursts). |
 | Burst series | Shots of one camera taken seconds apart. Listed with the sharpest one suggested, never cleaned. |
 | Duration | How long the whole audit took. |
@@ -122,13 +124,14 @@ space).
 
 **Only some file types** — `--ext` limits the analysis to some extensions, repeatable or
 comma-separated (`--ext png,webp`, case and leading dot do not matter); `[scan] extensions` in
-`config.toml` does the same. The audit then says which extensions it analysed. Supported
-extensions (`media-dedup audit --help` lists them too):
+`config.toml` does the same. The audit then says which extensions it analysed. The media
+extensions, analysed by default (`media-dedup audit --help` lists them too), are below; [other
+types](#other-file-types) (`--ext pdf`) are possible, with more precautions.
 
 | Type | Extensions |
 |---|---|
 | Images | avif, bmp, gif, heic, heif, jpe, jpeg, jpg, png, tif, tiff, webp |
-| RAW | arw, cr2, cr3, dng, nef, orf, pef, raf, rw2, srw |
+| RAW (decoded by LibRaw, previewed from the JPEG the camera embeds) | arw, cr2, cr3, dng, nef, orf, pef, raf, rw2, srw |
 | Videos | 3g2, 3gp, avi, flv, m2ts, m4v, mkv, mov, mp4, mpeg, mpg, mts, ts, webm, wmv |
 
 ```powershell
@@ -168,7 +171,7 @@ deleted.
 `plan.csv`, next to the report, lists **every** file of the plan in a spreadsheet (group,
 SHA-256, size, action, path, date), with no cap. It opens directly in Excel, accents included.
 The report also explains *how we know these are duplicates*, shows a random sample of photo
-groups, and gives every group its SHA-256 with a *Check it yourself* command: paste it in
+groups (RAW files included, through the preview their camera embeds), and gives every group its SHA-256 with a *Check it yourself* command: paste it in
 PowerShell (`Get-FileHash`) to see the same fingerprint for every copy, without trusting
 media-dedup.
 
@@ -235,6 +238,62 @@ docker run --rm -it `
   cavo789/media-dedup clean --tier near
 ```
 
+### Sidecar files
+
+Sidecars are small files next to a photo or a video, holding its metadata or its edits: `.xmp`
+(Lightroom, digiKam, darktable), `.aae` (iPhone edits), `.thm` (camcorder thumbnails). A
+sidecar belongs to the files of its folder with the same name: `IMG_1.xmp` to `IMG_1.jpg` or
+`IMG_1.CR2`, and `IMG_1.CR2.xmp` to `IMG_1.CR2`, case ignored.
+
+- **Next to its photo**, a sidecar is never touched.
+- **Orphan**: once `clean` has deleted or moved every file of the same name next to it (or if
+  there was none to begin with), a sidecar is useless. `clean` moves it to the quarantine,
+  never deletes it, after checking that no file of the same name has come back. `undo` puts
+  it back; `purge` deletes it for good. Without the `/quarantine` mount, orphans stay put.
+- **With `--ext`**, the audit looks at some files only: sidecars already alone before the
+  clean are left where they are, only those the clean itself leaves alone are moved.
+- **Protected folders** are never modified, sidecars included.
+
+The sidecar of a deleted copy is not moved next to the kept one. To keep a photo *with* its
+edits, make sure that copy is the one kept: name its folder in `--prefer`.
+
+### Other file types
+
+media-dedup is made for photos and videos: without `--ext`, nothing else is analysed. `--ext`
+(or `[scan] extensions`) also accepts other extensions, for instance to find the duplicate
+documents of a family folder:
+
+```powershell
+docker run --rm -it `
+  -v "C:\Users\Me\Documents:/data/c/Users/Me/Documents" `
+  -v "$HOME\media-dedup\journal:/journal" `
+  -v "$HOME\media-dedup\quarantine:/quarantine" `
+  cavo789/media-dedup clean --ext pdf,docx
+```
+
+Such files are handled with more care than photos. For a photo, the folder is only a way to
+sort; for a document or a program, **where the file lies can be what makes it work**: an
+identical `LICENSE`, `__init__.py` or template in two projects is expected, and deleting "the
+copy" breaks one of them.
+
+- **Only compared**, byte for byte: never decoded (images go through Pillow, RAW files through
+  LibRaw, videos through `ffprobe`; other types have no check), no preview, no near
+  duplicates. An empty file is never "broken": it may be a marker a program needs.
+- **Their copies are moved to the quarantine**, never deleted: `clean` refuses to run without
+  the `/quarantine` mount. `undo` puts them back; `purge` deletes them for good.
+- **Software folders are skipped**: `.git`, `.hg`, `.svn`, `node_modules`, `.venv`, `venv`,
+  `site-packages`, `__pycache__`, `AppData`, `ProgramData`, `Program Files`,
+  `Program Files (x86)` and `Windows`, whatever their case.
+- **A typo is not refused**: `--ext jpgg` is a valid extension, that simply matches nothing.
+  The audit names the extensions that are not photos or videos: read that warning.
+- **Sidecars** (`.xmp`, `.aae`, `.thm`) cannot be asked for: they [follow their
+  photo](#sidecar-files).
+- **`--ext` still limits the analysis**: `--ext jpg,pdf` analyses JPEG photos and PDF
+  documents, not the RAW files and videos.
+
+Mount the folders holding your documents, never a whole drive or `C:\Users`: programs and
+their data live there too.
+
 ## How it keeps your photos safe
 
 | Step | Guarantee |
@@ -247,6 +306,8 @@ docker run --rm -it `
 | Duplicates | Really deleted (the space is freed immediately); `undo` rebuilds them from the kept copy, date included, even across disks. |
 | Unreadable files | Moved to the quarantine, never deleted outright; `purge` deletes them for good when you are sure. |
 | Near duplicates | Never touched by default. With `--tier near`, moved to the quarantine (never deleted) once checked: the kept photo still exists, the copy is the very file the audit saw. `undo` puts them back. |
+| Other file types | Only when asked for with `--ext`: [their copies](#other-file-types) are moved to the quarantine (never deleted), and software folders (`.git`, `node_modules`, `AppData`, …) are skipped. |
+| Sidecars | Never touched next to their photo. An orphan is moved to the quarantine (never deleted) once checked: unchanged since the audit, and no file of the same name next to it. `undo` puts it back. |
 | Every group | Always keeps at least one copy. |
 
 ## Mount points
@@ -256,7 +317,7 @@ docker run --rm -it `
 | `/data/<drive>/<path>` | The folders to analyse (`C:\Photos` → `/data/c/Photos`). | always; `:ro` for `audit` |
 | `/config` | `config.toml` only — created, commented, on first run. | optional |
 | `/journal` | One JSONL journal per clean. | **required** by `clean`, `undo`, `history` |
-| `/quarantine` | Unreadable files set aside by `clean`. | when broken files exist |
+| `/quarantine` | Unreadable files, orphan sidecars, near duplicates and copies of other file types set aside by `clean`. | to handle them |
 | `/reports` | One folder per run (`report.html`, one page per folder pair, previews, `plan.csv`) and `index.html`. | optional |
 | `/cache` | SQLite index: later audits only read new or changed files. | optional, recommended |
 
@@ -267,7 +328,7 @@ Missing mounts are explained by 💡 tips. The image also runs with `--read-only
 | Command | What it does |
 |---|---|
 | `audit` | Find exact duplicates and broken files. Never writes to `/data`. |
-| `clean` | Audit, confirm, then delete duplicate copies, delete empty files and quarantine unreadable ones. |
+| `clean` | Audit, confirm, then delete duplicate copies, delete empty files and quarantine unreadable ones and orphan sidecars. |
 | `undo [RUN]` | Restore every file of a clean run (the latest by default). |
 | `history` | List the clean runs: files deleted, space freed, quarantine, restores. |
 | `reports [--prune N]` | List the reports and refresh `index.html`; `--prune N` keeps the N most recent. |
@@ -285,7 +346,7 @@ Global options go **before** the command: `media-dedup --locale fr audit`.
 | `--prefer PATH` | (`audit`, `clean`, `crosscheck`) Folder whose copies are kept first; repeatable, ordered. |
 | `--protect PATH` | (`audit`, `clean`, `crosscheck`) Folder never modified; its files are the copies kept. |
 | `--exclude PATH` | (`audit`, `clean`, `crosscheck`) Folder never analysed. |
-| `--ext EXT` | (`audit`, `clean`, `crosscheck`) Only analyse these extensions (`--ext png,webp`); all supported ones by default. |
+| `--ext EXT` | (`audit`, `clean`, `crosscheck`) Only analyse these extensions (`--ext png,webp`); every photo, RAW and video one by default. [Other types](#other-file-types) too (`--ext pdf,docx`). |
 | `--yes`, `-y` | (`clean`, `purge`) Do not ask for confirmation. |
 | `--tier exact\|near` | (`clean`) `exact` (default): byte-for-byte copies only. `near`: also move [near duplicates](#near-duplicates-and-bursts) to the quarantine. |
 
@@ -326,7 +387,7 @@ protected = []
 excluded = ['D:\backup']
 
 [scan]
-extensions = []       # e.g. ["png", "webp"]; empty: every supported extension
+extensions = []       # e.g. ["png", "webp"] or ["pdf"]; empty: every photo, RAW and video one
 
 [keep]                 # leave commented: built-in lists ('media-dedup config' shows them)
 # generated_names = ['IMG_\d+', 'DSC\d+']   # file names cameras and apps generate
@@ -340,7 +401,8 @@ confirm = true
 - **`protected`**: never modified — and their files are always the copies kept, so identical
   files *elsewhere are deleted*. Think "master library".
 - **`excluded`**: never analysed. Use it for a real backup that must stay a second copy.
-- **`extensions`**: [only these file types](#going-further) are analysed.
+- **`extensions`**: [only these file types](#going-further) are analysed; [other
+  types](#other-file-types) than photos and videos are allowed.
 - **`generated_names`**, **`generic_folders`**: regular expressions matching a whole file name
   (without extension) or folder name, case ignored. Between identical copies, a name or folder
   that matches is worth less: `Mariage 2015\Marie et Paul.jpg` is kept rather than
@@ -381,8 +443,9 @@ two different files never share a SHA-256: the odds are far lower than those of 
   different file. The audit lists it as a [near duplicate](#near-duplicates-and-bursts), but
   `clean` leaves it alone unless you ask with `--tier near`, and then only moves it to the
   quarantine.
-- **Only photos and videos** are analysed, recognised by their extension. Other files are
-  ignored.
+- **Only photos, RAW files and videos** are analysed, recognised by their extension. Other
+  files only when you [ask for them](#other-file-types) with `--ext`, and then their copies
+  are moved to the quarantine, never deleted.
 
 ### What the tool checks before deleting
 

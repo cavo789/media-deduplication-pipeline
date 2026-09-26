@@ -1,4 +1,7 @@
-"""Make sure every file of `/data` is seen once: a file seen twice is no duplicate."""
+"""Check what the audit sees, and say what it leaves out or handles apart.
+
+Every file of `/data` must be seen once: a file seen twice is no duplicate.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +10,7 @@ from typing import TYPE_CHECKING
 from media_dedup.errors import MountError
 from media_dedup.i18n import _, ngettext
 from media_dedup.paths.overlaps import mount_overlaps
+from media_dedup.services.policy import unmounted_folders
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -73,3 +77,37 @@ def warn_about_aliases(runtime: Runtime, aliases: Sequence[Alias]) -> None:
             same_as=runtime.mapper.to_host(example.same_as),
         )
     )
+
+
+def warn_about_scope(runtime: Runtime) -> None:
+    """Warn about the scope: unmounted folders, extension filter, other files.
+
+    Args:
+        runtime: Settings, mount points and output.
+    """
+    for folder in unmounted_folders(runtime.settings.folders, runtime.mapper):
+        runtime.output.warning(
+            _("Configured folder {path} is not mounted: it is ignored.").format(
+                path=folder
+            ),
+        )
+    scan = runtime.settings.scan
+    if scan.extensions:
+        runtime.output.warning(
+            _("Only these extensions are analysed: {extensions}.").format(
+                extensions=", ".join(scan.extensions)
+            ),
+        )
+    if scan.other_files:
+        runtime.output.warning(
+            _(
+                "Not photos or videos: {extensions}. These files are only compared "
+                "byte for byte, and their copies are moved to the quarantine."
+            ).format(extensions=", ".join(scan.other_files)),
+        )
+        runtime.output.tip(
+            _(
+                "Software folders (.git, node_modules, AppData, Program Files, ...) "
+                "are skipped: there, where a file lies makes a program work."
+            )
+        )

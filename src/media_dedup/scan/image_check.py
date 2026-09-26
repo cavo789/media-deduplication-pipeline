@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import multiprocessing
+import os
 import signal
 import struct
+import sys
 import threading
 import warnings
 from dataclasses import dataclass
@@ -35,17 +38,28 @@ _DECODE_ERRORS: Final = (
 
 
 def prepare_image_worker() -> None:
-    """Configure a worker: ignore Ctrl+C, HEIC support, no pixel limit.
+    """Configure a worker: ignore Ctrl+C, silence stderr, HEIC support, no pixel limit.
 
     Ctrl+C reaches every process of the terminal; the parent alone handles it, so
-    workers never print a `KeyboardInterrupt` traceback. Huge panoramas are
+    workers never print a `KeyboardInterrupt` traceback. LibRaw prints its warnings
+    ("Unexpected end of file") straight to the terminal: a worker process's standard
+    error is discarded, its errors reach the parent as exceptions. Huge panoramas are
     legitimate photos, not decompression bombs to refuse: without lifting the limit
     they would be reported as broken.
     """
     if threading.current_thread() is threading.main_thread():  # a worker process
         signal.signal(signal.SIGINT, signal.SIG_IGN)
+    if multiprocessing.parent_process() is not None:
+        _discard_stderr()
     pillow_heif.register_heif_opener()
     Image.MAX_IMAGE_PIXELS = None
+
+
+def _discard_stderr() -> None:
+    """Point the standard error of this process, C libraries included, to nowhere."""
+    devnull = os.open(os.devnull, os.O_WRONLY)
+    os.dup2(devnull, sys.stderr.fileno())
+    os.close(devnull)
 
 
 @dataclass(frozen=True, slots=True)

@@ -13,7 +13,6 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from media_dedup.paths.host_paths import is_within
-from media_dedup.scan.filters import media_kind
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -52,7 +51,7 @@ class AnalysedScope:
         """
         if not any(is_within(path, root) for root in self.roots):
             return OutsideReason.NOT_MOUNTED
-        if media_kind(path) is None or not self.filters.accepts(path):
+        if not self.filters.accepts(path):
             return OutsideReason.EXTENSION
         if any(self.filters.skips_dir(folder) for folder in path.parents):
             return OutsideReason.EXCLUDED

@@ -43,6 +43,11 @@ def findings_table(findings: AuditFindings) -> Table:
     table.add_row(
         _("Broken files (empty or unreadable)"), human_number(len(plan.broken))
     )
+    if plan.orphans:
+        table.add_row(
+            _("Orphan sidecars (.xmp, .aae, .thm) to move"),
+            human_number(len(plan.orphans)),
+        )
     similar = findings.similar
     if similar.near_count:
         table.add_row(

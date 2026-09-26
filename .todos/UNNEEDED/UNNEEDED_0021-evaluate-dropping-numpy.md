@@ -38,3 +38,15 @@ recomputed.
 
 - [ ] Decision recorded; if implemented, the image loses about 70 MB (check with `dive`).
 - [ ] Same test results; audit time per image not worse than 2x (measure on the demo tree).
+
+## Status — UNNEEDED (2026-09-26)
+
+### Not done
+- Dropping numpy is no longer possible.
+  **Reason:** TODO 0006 (2026-09-26) added `rawpy` (LibRaw) to decode RAW files and read their
+  embedded previews, a choice made knowing it rules this TODO out: `rawpy` depends on numpy
+  (its API returns numpy arrays), so numpy stays in the image whatever `scan/visual.py` does.
+  Measured with `dive` 0.13.1 on `media-dedup:latest`: the `/opt/venv` layer went from
+  144.0 MB to 154.4 MB (`rawpy` 4.9 MB + `rawpy.libs` 5.0 MB), the image from 404.6 MB to
+  414.9 MB, efficiency unchanged (99.05 %). Reopen only if RAW support moves away from
+  `rawpy`.

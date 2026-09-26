@@ -113,13 +113,11 @@ def _source_of(entry: JournalEntry) -> Path | None:
         The keeper of a deleted duplicate, the quarantined copy, or None for an
         empty file (recreated from nothing).
     """
-    match entry.action:
-        case ActionKind.DELETE_DUPLICATE:
-            return Path(entry.keeper) if entry.keeper else None
-        case ActionKind.QUARANTINE | ActionKind.QUARANTINE_NEAR:
-            return Path(entry.quarantine) if entry.quarantine else None
-        case ActionKind.DELETE_EMPTY:
-            return None
+    if entry.action in QUARANTINED:
+        return Path(entry.quarantine) if entry.quarantine else None
+    if entry.action is ActionKind.DELETE_DUPLICATE:
+        return Path(entry.keeper) if entry.keeper else None
+    return None
 
 
 def _rebuild(entry: JournalEntry, source: Path | None) -> None:

@@ -10,7 +10,9 @@ from typing import TYPE_CHECKING, Final
 from PIL import Image, ImageFile, ImageOps
 
 from media_dedup.constants import THUMBNAILS_DIR_NAME, MediaKind, Sizes
+from media_dedup.scan.filters import media_kind
 from media_dedup.scan.image_check import prepare_image_worker
+from media_dedup.scan.raw_check import RAW_ERRORS, raw_preview
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -19,15 +21,15 @@ if TYPE_CHECKING:
 
     from media_dedup.scan.models import MediaFile
 
-PREVIEWABLE: Final = frozenset({MediaKind.IMAGE})
+PREVIEWABLE: Final = frozenset({MediaKind.IMAGE, MediaKind.RAW})
 _JPEG_QUALITY = 80
 _THUMBNAIL_NAME_LENGTH = 20
 _THUMBNAIL_ERRORS = (
-    OSError,
     ValueError,
     SyntaxError,
     EOFError,
     Image.DecompressionBombError,
+    *RAW_ERRORS,
 )
 
 
@@ -66,16 +68,30 @@ def make_thumbnail(job: ThumbnailJob) -> bool:
     prepare_image_worker()
     ImageFile.LOAD_TRUNCATED_IMAGES = True
     try:
-        with Image.open(job.source) as image:
-            preview = ImageOps.exif_transpose(image).convert("RGB")
-            preview.thumbnail((Sizes.THUMBNAIL_EDGE, Sizes.THUMBNAIL_EDGE))
-            job.target.parent.mkdir(parents=True, exist_ok=True)
-            preview.save(job.target, "JPEG", quality=_JPEG_QUALITY)
+        preview = _upright(job.source)
+        preview.thumbnail((Sizes.THUMBNAIL_EDGE, Sizes.THUMBNAIL_EDGE))
+        job.target.parent.mkdir(parents=True, exist_ok=True)
+        preview.save(job.target, "JPEG", quality=_JPEG_QUALITY)
     except _THUMBNAIL_ERRORS:
         return False
     finally:
         ImageFile.LOAD_TRUNCATED_IMAGES = False
     return True
+
+
+def _upright(source: Path) -> Image.Image:
+    """Open a picture as seen: an image, or the preview embedded in a RAW file.
+
+    Args:
+        source: Image or RAW file.
+
+    Returns:
+        The picture, upright, in RGB.
+    """
+    if media_kind(source) is MediaKind.RAW:
+        return raw_preview(source).convert("RGB")
+    with Image.open(source) as image:
+        return ImageOps.exif_transpose(image).convert("RGB")
 
 
 async def make_thumbnails(

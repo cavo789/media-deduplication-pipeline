@@ -5,24 +5,36 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from media_dedup.constants import BrokenReason, MediaKind
 from media_dedup.i18n import _
 from media_dedup.scan.image_check import inspect_image
 from media_dedup.scan.models import BrokenFile
 from media_dedup.scan.progress import Step
+from media_dedup.scan.raw_check import inspect_raw
 from media_dedup.scan.video_check import video_problem
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
     from pathlib import Path
 
     from media_dedup.index.facts import FileFacts
     from media_dedup.scan.deps import IntegrityTools, ScanDeps
+    from media_dedup.scan.image_check import ImageInspection
     from media_dedup.scan.models import MediaFile, VisualFacts
 
-_CHECKED_KINDS = frozenset({MediaKind.IMAGE, MediaKind.VIDEO})
+type _Decoder = Callable[[Path], ImageInspection]
+
+# Decoded in worker processes; videos are opened by `ffprobe` instead.
+_DECODERS: Final[Mapping[MediaKind, tuple[_Decoder, BrokenReason]]] = MappingProxyType(
+    {
+        MediaKind.IMAGE: (inspect_image, BrokenReason.UNREADABLE_IMAGE),
+        MediaKind.RAW: (inspect_raw, BrokenReason.UNREADABLE_RAW),
+    }
+)
+# Other files (asked for with --ext) are never checked: nothing says what they hold.
+_MEDIA_KINDS: Final = frozenset({MediaKind.IMAGE, MediaKind.RAW, MediaKind.VIDEO})
 _EMPTY_DETAIL = "0 bytes"
 
 
@@ -50,8 +62,9 @@ class BrokenFileFinder:
     async def find(self, files: Sequence[MediaFile]) -> IntegrityFindings:
         """Return the broken files among `files`, and describe the readable images.
 
-        RAW files are only checked for emptiness (no decoder), and videos are skipped
-        when `ffprobe` is unavailable.
+        Images are decoded by Pillow, RAW files by LibRaw, videos opened by `ffprobe`
+        (skipped when it is unavailable). Other files are never broken, even empty:
+        an empty file can be a marker a program needs.
 
         Args:
             files: Every media file found.
@@ -63,7 +76,7 @@ class BrokenFileFinder:
         broken = [
             BrokenFile(file, BrokenReason.EMPTY, _EMPTY_DETAIL)
             for file in files
-            if file.size == 0
+            if file.size == 0 and file.kind in _MEDIA_KINDS
         ]
         to_check: list[MediaFile] = []
         known: dict[Path, FileFacts] = {}
@@ -78,8 +91,8 @@ class BrokenFileFinder:
         step = Step(
             _("Checking that files can be read"),
             _(
-                "Finds broken files: empty (0 bytes), images that cannot be decoded, "
-                "videos that cannot be opened."
+                "Finds broken files: empty (0 bytes), images and RAW files that cannot "
+                "be decoded, videos that cannot be opened."
             ),
         )
         self._deps.progress.start(step, len(to_check))
@@ -109,11 +122,11 @@ class BrokenFileFinder:
             file: Candidate file.
 
         Returns:
-            True for images, and for videos when `ffprobe` is available.
+            True for images and RAW files, and for videos when `ffprobe` is available.
         """
         if file.kind is MediaKind.VIDEO:
             return self._tools.ffprobe is not None
-        return file.kind in _CHECKED_KINDS
+        return file.kind in _DECODERS
 
     async def _check(self, file: MediaFile) -> FileFacts:
         """Check one file and return its updated facts.
@@ -131,11 +144,12 @@ class BrokenFileFinder:
                     problem = await video_problem(file.path, self._tools.ffprobe)
                 reason = BrokenReason.UNREADABLE_VIDEO
             else:
+                decode, reason = _DECODERS[file.kind]
                 loop = asyncio.get_running_loop()
                 inspection = await loop.run_in_executor(
-                    self._tools.executor, inspect_image, file.path
+                    self._tools.executor, decode, file.path
                 )
-                problem, reason = inspection.problem, BrokenReason.UNREADABLE_IMAGE
+                problem = inspection.problem
                 facts = facts.with_visual(inspection.visual)
         finally:
             self._deps.progress.advance()

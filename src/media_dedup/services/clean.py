@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
-from media_dedup.actions.clean import CleanContext, CleanExecutor
+from media_dedup.actions.clean import CleanExecutor
 from media_dedup.actions.journal import JournalWriter, journal_file
+from media_dedup.actions.journaled import CleanContext
 from media_dedup.actions.runs import new_run_id
 from media_dedup.constants import BrokenReason
 from media_dedup.errors import MountError
@@ -42,12 +43,18 @@ class CleanService:
 
         Raises:
             MountError: The journal is not persistent, a folder is read-only, or near
-                duplicates have no quarantine to go to.
+                duplicates or copies of other files have no quarantine to go to.
         """
         runtime = self._runtime
-        if near and not runtime.persistent(MountKind.QUARANTINE):
+        quarantine = runtime.persistent(MountKind.QUARANTINE)
+        if near and not quarantine:
             raise MountError(
                 _("--tier near moves near duplicates to /quarantine: mount it."),
+                _('Add -v "<a folder of yours>:/quarantine" to handle them.'),
+            )
+        if runtime.settings.scan.other_files and not quarantine:
+            raise MountError(
+                _("Copies of other files than media go to /quarantine: mount it."),
                 _('Add -v "<a folder of yours>:/quarantine" to handle them.'),
             )
         if not runtime.persistent(MountKind.JOURNAL):
@@ -70,7 +77,9 @@ class CleanService:
             )
 
     def feasible(self, plan: CleanPlan) -> CleanPlan:
-        """Drop the unreadable files when there is no quarantine to move them to.
+        """Drop what has to be moved when there is no quarantine to move it to.
+
+        Unreadable files and orphan sidecars are moved, never deleted.
 
         Args:
             plan: The audited plan.
@@ -81,14 +90,17 @@ class CleanService:
         if self._runtime.persistent(MountKind.QUARANTINE):
             return plan
         kept = tuple(item for item in plan.broken if item.reason is BrokenReason.EMPTY)
-        if len(kept) != len(plan.broken):
+        if len(kept) != len(plan.broken) or plan.orphans:
             self._runtime.output.warning(
-                _("No quarantine mount: unreadable files are left in place.")
+                _(
+                    "No quarantine mount: unreadable files and orphan sidecars are "
+                    "left in place."
+                )
             )
             self._runtime.output.tip(
                 _('Add -v "<a folder of yours>:/quarantine" to handle them.')
             )
-        return replace(plan, broken=kept)
+        return replace(plan, broken=kept, sidecars=())
 
     def with_near(self, plan: CleanPlan, findings: AuditFindings) -> CleanPlan:
         """Add the near duplicates to the plan (`--tier near`).
@@ -98,7 +110,7 @@ class CleanService:
             findings: The audit, holding the near duplicates.
 
         Returns:
-            The plan, near duplicates included.
+            The plan, near duplicates and the sidecars they leave orphan included.
 
         Near duplicates are moved to the quarantine, never deleted: `ensure_ready`
         with `near=True` has checked it is mounted.

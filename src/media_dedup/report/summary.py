@@ -62,6 +62,7 @@ class ReportSummary(BaseModel):
     duplicate_files: int
     reclaimable_bytes: int
     broken_files: int
+    orphan_sidecars: int = 0
     freed_bytes: int = 0
     run_id: str | None = None
     plan_file: str | None = None

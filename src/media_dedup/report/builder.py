@@ -22,6 +22,8 @@ from media_dedup.report.views import (
     GroupsSection,
     IncidentsSection,
     IncidentView,
+    OrphansSection,
+    ReportHeader,
     ReportView,
 )
 
@@ -85,6 +87,7 @@ class ReportBuilder:
             duplicate_files=plan.removable_count,
             reclaimable_bytes=plan.reclaimable,
             broken_files=len(plan.broken),
+            orphan_sidecars=len(plan.orphans),
             freed_bytes=record.outcome.bytes_done if record.outcome else 0,
             run_id=record.run_id,
             plan_file=PLAN_CSV_FILE_NAME,
@@ -106,8 +109,9 @@ class ReportBuilder:
         names = self._names(previews)
         groups = GroupRenderer(self.mapper, names)
         return ReportView(
-            summary=self.summary(record),
-            roots=self._roots(record.findings.roots),
+            header=ReportHeader(
+                self.summary(record), self._roots(record.findings.roots)
+            ),
             pairs=tuple(
                 self._renderer(record, previews).summary(index, pair)
                 for index, pair in enumerate(report_pairs(record), start=1)
@@ -129,6 +133,13 @@ class ReportBuilder:
             incidents=IncidentsSection(
                 skipped=self._incidents(outcome.skipped if outcome else ()),
                 failed=self._incidents(outcome.failed if outcome else ()),
+            ),
+            orphans=OrphansSection(
+                paths=tuple(
+                    self.mapper.to_host(file.path)
+                    for file in plan.orphans[: Sizes.MAX_ORPHANS_IN_REPORT]
+                ),
+                hidden=max(0, len(plan.orphans) - Sizes.MAX_ORPHANS_IN_REPORT),
             ),
         )
 

@@ -50,11 +50,13 @@ class ColorMode(StrEnum):
 
 
 class MediaKind(StrEnum):
-    """Families of media files the tool knows how to handle."""
+    """Families of files: media, other files asked for with `--ext`, sidecars."""
 
     IMAGE = "image"
     RAW = "raw"
     VIDEO = "video"
+    OTHER = "other"
+    SIDECAR = "sidecar"
 
 
 class KeepReason(StrEnum):
@@ -75,6 +77,7 @@ class BrokenReason(StrEnum):
 
     EMPTY = "empty"
     UNREADABLE_IMAGE = "unreadable-image"
+    UNREADABLE_RAW = "unreadable-raw"
     UNREADABLE_VIDEO = "unreadable-video"
 
 
@@ -85,6 +88,8 @@ class ActionKind(StrEnum):
     DELETE_EMPTY = "delete-empty"
     QUARANTINE = "quarantine"
     QUARANTINE_NEAR = "quarantine-near"
+    QUARANTINE_DUPLICATE = "quarantine-duplicate"
+    QUARANTINE_SIDECAR = "quarantine-sidecar"
 
 
 class CleanTier(StrEnum):
@@ -134,6 +139,7 @@ class Sizes(IntEnum):
     MAX_SAMPLED_PAIRS = 50
     RANDOM_SAMPLE = 30
     MAX_SIMILAR_IN_REPORT = 200
+    MAX_ORPHANS_IN_REPORT = 500
     IO_CONCURRENCY = 16
 
 
@@ -149,11 +155,16 @@ VIDEO_EXTENSIONS: Final = frozenset(
     | {".mpeg", ".mpg", ".mts", ".ts", ".webm", ".wmv"},
 )
 MEDIA_EXTENSIONS: Final = IMAGE_EXTENSIONS | RAW_EXTENSIONS | VIDEO_EXTENSIONS
-# Sidecars carry metadata or edits of a sibling photo: never touched (see .todos/).
+# Sidecars hold metadata or edits of the photo of the same name: moved once orphan.
 SIDECAR_EXTENSIONS: Final = frozenset({".aae", ".thm", ".xmp"})
 # System folders that never hold user media (Windows, Synology, desktop trash bins).
 EXCLUDED_DIR_NAMES: Final = frozenset(
     {"$recycle.bin", "system volume information", "@eadir", "#recycle", ".trash"},
+)
+# Software folders, skipped when other files than media are analysed (paths matter).
+APP_DIR_NAMES: Final = frozenset(
+    {".git", ".hg", ".svn", ".venv", "venv", "node_modules", "site-packages", "windows"}
+    | {"__pycache__", "appdata", "programdata", "program files", "program files (x86)"},
 )
 # File names (without extension and copy marks) that cameras and apps generate: they say
 # nothing, so a copy with a name typed by someone is kept instead. Whole name, any case.
