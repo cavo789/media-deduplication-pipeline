@@ -94,6 +94,7 @@ class AuditService:
             plan=build_plan(groups, broken, policy),
             seconds=time.monotonic() - started,
             folder_files=MappingProxyType(Counter(file.path.parent for file in files)),
+            groups=groups,
         )
 
     def _list_files(self, roots: tuple[Path, ...]) -> list[MediaFile]:

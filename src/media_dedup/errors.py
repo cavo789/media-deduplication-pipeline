@@ -28,3 +28,7 @@ class MountError(MediaDedupError):
 
 class JournalError(MediaDedupError):
     """A journal cannot be found or read."""
+
+
+class CrossCheckError(MediaDedupError):
+    """Czkawka results are missing, unreadable, or cover other folders."""

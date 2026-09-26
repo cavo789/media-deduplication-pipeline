@@ -4,10 +4,16 @@ msgid_plural "%(num)s copies"
 msgstr[0] ""
 msgstr[1] ""
 
+msgid "'crosscheck' reads Czkawka's results from /reports: mount it."
+msgstr ""
+
 msgid "'media-dedup undo <run>' restores the files of a run."
 msgstr ""
 
 msgid "'undo' can no longer restore these broken files."
+msgstr ""
+
+msgid "<the folder you mount on /reports>"
 msgstr ""
 
 msgid "A Windows folder (PowerShell):"
@@ -38,6 +44,9 @@ msgid "Add -v \"<a folder of yours>:/quarantine\" to handle them."
 msgstr ""
 
 msgid "Add -v \"<a folder of yours>:/reports\" to get HTML reports."
+msgstr ""
+
+msgid "Add -v \"<a folder of yours>:/reports\", as in the Czkawka command."
 msgstr ""
 
 msgid "Add -v media-dedup-cache:/cache: the next audits will be much faster."
@@ -139,6 +148,11 @@ msgstr ""
 msgid "Cleaning"
 msgstr ""
 
+msgid ""
+"Compare a fresh audit with Czkawka's results: a second, independent "
+"opinion."
+msgstr ""
+
 msgid "Comparing files of equal size"
 msgstr ""
 
@@ -147,6 +161,30 @@ msgid "Configured folder {path} is not mounted: it is ignored."
 msgstr ""
 
 msgid "Copies found in these folders are kept first, in this order."
+msgstr ""
+
+#, python-brace-format
+msgid "Czkawka agrees: the same {copies} extra copies in {groups} groups."
+msgstr ""
+
+#, python-brace-format
+msgid "Czkawka disagrees on {count} group: look at it before cleaning."
+msgid_plural "Czkawka disagrees on {count} groups: look at them before cleaning."
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid "Czkawka disagrees on {count} groups: look at them before cleaning."
+msgstr ""
+
+msgid "Czkawka is an independent duplicate finder."
+msgstr ""
+
+#, python-brace-format
+msgid "Czkawka results of {date} UTC."
+msgstr ""
+
+msgid "Czkawka's results cover other folders than this run."
 msgstr ""
 
 msgid "Date"
@@ -236,6 +274,10 @@ msgstr ""
 msgid "Files processed"
 msgstr ""
 
+#, python-brace-format
+msgid "Files set aside, as media-dedup does not analyse them: {count}."
+msgstr ""
+
 msgid ""
 "Find and safely clean duplicate photos and videos across folders and "
 "disks. Start with 'audit' (read-only), then 'clean'."
@@ -277,6 +319,12 @@ msgid "Folders analysed:"
 msgstr ""
 
 msgid "Folders sharing identical files"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Found by media-dedup only: {ours}. Found by Czkawka only: {theirs}. The "
+"terminal lists them."
 msgstr ""
 
 msgid "Freed"
@@ -390,6 +438,9 @@ msgid ""
 "files elsewhere ARE deleted (a \"master library\")."
 msgstr ""
 
+msgid "No Czkawka results yet: run Czkawka first (PowerShell):"
+msgstr ""
+
 msgid "No clean run found in the journal."
 msgstr ""
 
@@ -420,6 +471,9 @@ msgid "No report yet: run 'media-dedup audit'."
 msgstr ""
 
 msgid "No reports mount: there is no report to list."
+msgstr ""
+
+msgid "Not cross-checked: 'media-dedup crosscheck' compares with Czkawka."
 msgstr ""
 
 msgid "Nothing to clean: no duplicate and no broken file."
@@ -547,7 +601,13 @@ msgstr ""
 msgid "Run 'media-dedup history' to list the runs."
 msgstr ""
 
+msgid "Run Czkawka with the same -v options: 'audit' prints the command."
+msgstr ""
+
 msgid "Run docker with -it, or add --yes."
+msgstr ""
+
+msgid "Run the Czkawka command again; it writes this file with -C."
 msgstr ""
 
 msgid "Run to undo (see 'history'); the latest one by default."
@@ -572,6 +632,18 @@ msgid "Samples"
 msgstr ""
 
 msgid "Scan (override scan.* of config.toml)"
+msgstr ""
+
+msgid "Second opinion"
+msgstr ""
+
+msgid ""
+"Second opinion: run Czkawka, an independent duplicate finder, on the same"
+" folders, then 'media-dedup crosscheck' (same -v options):"
+msgstr ""
+
+#, python-brace-format
+msgid "Set aside, as media-dedup does not analyse them: {details}."
 msgstr ""
 
 msgid "Setting"
@@ -750,6 +822,9 @@ msgstr ""
 msgid "freed"
 msgstr ""
 
+msgid "in excluded folders"
+msgstr ""
+
 msgid "it is the kept copy itself, seen through another path"
 msgstr ""
 
@@ -776,6 +851,18 @@ msgid "media-dedup reports"
 msgstr ""
 
 msgid "move to the quarantine"
+msgstr ""
+
+msgid "only Czkawka"
+msgstr ""
+
+msgid "only media-dedup"
+msgstr ""
+
+msgid "other file types"
+msgstr ""
+
+msgid "outside the mounted folders"
 msgstr ""
 
 msgid "preferred folder"
@@ -875,10 +962,18 @@ msgid "{name} must be a JSON array, e.g. [\"C:\\\\Photos\"]"
 msgstr ""
 
 #, python-brace-format
+msgid "{path} is not a Czkawka result file."
+msgstr ""
+
+#, python-brace-format
 msgid "{removed} holds nothing else: it is entirely a copy of {kept}."
 msgstr ""
 
 #, python-format
 msgid "… and %(count)s more groups (largest files are shown first)."
+msgstr ""
+
+#, python-brace-format
+msgid "… and {count} more."
 msgstr ""
 

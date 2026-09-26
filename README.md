@@ -241,6 +241,7 @@ Missing mounts are explained by 💡 tips. The image also runs with `--read-only
 | `history` | List the clean runs: files deleted, space freed, quarantine, restores. |
 | `reports [--prune N]` | List the reports and refresh `index.html`; `--prune N` keeps the N most recent. |
 | `purge [RUN]` | Permanently delete the quarantine of a run (of every run by default). |
+| `crosscheck` | Audit again, then compare with the results of [Czkawka](#get-a-second-opinion-with-czkawka), an independent duplicate finder. |
 | `config` | Show every setting, where it comes from, and the state of each mount point. |
 
 Global options go **before** the command: `media-dedup --locale fr audit`.
@@ -250,10 +251,10 @@ Global options go **before** the command: `media-dedup --locale fr audit`.
 | `--locale en\|fr` | Interface language (English by default); numbers and sizes follow it: `67,947` and `44.3 GB`, or `67.947` and `44,3 Go`. |
 | `--verbosity error\|warning\|info\|debug` | How much to log. |
 | `--color auto\|always\|never` | ANSI colours (`NO_COLOR` is honoured). |
-| `--prefer PATH` | (`audit`, `clean`) Folder whose copies are kept first; repeatable, ordered. |
-| `--protect PATH` | (`audit`, `clean`) Folder never modified; its files are the copies kept. |
-| `--exclude PATH` | (`audit`, `clean`) Folder never analysed. |
-| `--ext EXT` | (`audit`, `clean`) Only analyse these extensions (`--ext png,webp`); all supported ones by default. |
+| `--prefer PATH` | (`audit`, `clean`, `crosscheck`) Folder whose copies are kept first; repeatable, ordered. |
+| `--protect PATH` | (`audit`, `clean`, `crosscheck`) Folder never modified; its files are the copies kept. |
+| `--exclude PATH` | (`audit`, `clean`, `crosscheck`) Folder never analysed. |
+| `--ext EXT` | (`audit`, `clean`, `crosscheck`) Only analyse these extensions (`--ext png,webp`); all supported ones by default. |
 | `--yes`, `-y` | (`clean`, `purge`) Do not ask for confirmation. |
 
 `media-dedup --help` and `media-dedup <command> --help` document everything, in both languages.
@@ -375,27 +376,42 @@ The report (`-v "…:/reports"`) is built for that:
 ### Get a second opinion with Czkawka
 
 [Czkawka](https://github.com/qarmin/czkawka) is an independent, open-source duplicate finder,
-written differently and with another hash function. The community image `jlesage/czkawka`
-(about 500 MB) ships its command-line tool. Run it with the **same `-v` options as your
-audit**. The options below give it the same scope as media-dedup: every file size (`-m 1`)
-and the same extensions (`-x`):
+written differently and with another hash function. Two tools written independently rarely
+make the same mistake: when they agree, you can clean with confidence.
+
+**1. Audit, with a reports folder.** When it finds duplicates, `audit` ends with a
+*Second opinion* tip and the exact Czkawka command for your folders: the same `-v` options,
+the same extensions, the same excluded folders, every file size. It looks like this (the
+community image `jlesage/czkawka`, about 500 MB, ships Czkawka's command-line tool):
 
 ```powershell
-docker run --rm -v "C:\Photos:/data/c/Photos:ro" jlesage/czkawka `
-  czkawka_cli dup -d /data -m 1 -W `
+docker run --rm -v "C:\Photos:/data/c/Photos:ro" -v "$HOME\media-dedup\reports:/out" `
+  jlesage/czkawka:v26.09.2 czkawka_cli dup -d /data -m 1 -W -N -C /out/czkawka.json `
   -x 3g2,3gp,arw,avi,avif,bmp,cr2,cr3,dng,flv,gif,heic,heif,jpe,jpeg,jpg,m2ts,m4v,mkv,mov,mp4,mpeg,mpg,mts,nef,orf,pef,png,raf,rw2,srw,tif,tiff,ts,webm,webp,wmv
 ```
 
-Its summary line, *Found N duplicated files which in G groups*, should match media-dedup's
-*Extra copies that can be deleted* (N) and *Groups of identical files* (G). Known causes of a
-small difference:
+**2. Paste and run it.** Czkawka writes its results, `czkawka.json`, in your reports folder.
+From WSL, write your folders as `/mnt/c/...` instead of `C:\...`.
 
-- folders you excluded in `config.toml`: add `-e /data/c/Photos/<folder>` to Czkawka;
-- an `--ext` filter on the audit;
-- broken files: media-dedup keeps unreadable files out of the groups.
+**3. Compare**, with the same options as the audit:
 
-Two tools written independently rarely make the same mistake. When they agree, you can clean
-with confidence; when they do not, look at the differences before cleaning.
+```powershell
+docker run --rm -it -v "C:\Photos:/data/c/Photos:ro" `
+  -v "$HOME\media-dedup\reports:/reports" -v media-dedup-cache:/cache `
+  cavo789/media-dedup crosscheck
+```
+
+`crosscheck` audits again (quickly, thanks to the cache) and compares the two tools group by
+group:
+
+- *Czkawka agrees: the same N extra copies in G groups*;
+- or *Czkawka disagrees on N groups*, listing each group found by one tool only. Look at them
+  before cleaning.
+
+Files media-dedup deliberately leaves out are set aside and counted, not reported as
+differences: other file types, excluded or system folders, broken files. The verdict also
+goes into the HTML report, and `clean` recalls it before asking for confirmation. It is
+information only: `clean` never requires it.
 
 ### Recommendations
 

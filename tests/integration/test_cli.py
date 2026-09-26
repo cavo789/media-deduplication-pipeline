@@ -12,37 +12,10 @@ from media_dedup.__main__ import main
 from media_dedup.cli.app import build_app
 from media_dedup.constants import Locale
 from media_dedup.i18n import install
-from media_dedup.paths.mount_kind import MountKind
-from tests.support.demo import build_demo
+from tests.support.cli import run
 
 if TYPE_CHECKING:
-    from typer.testing import Result
-
     from media_dedup.paths.locations import Locations
-
-
-@pytest.fixture
-def cli(locations: Locations, monkeypatch: pytest.MonkeyPatch) -> CliRunner:
-    """A runner whose mount points are the test's temporary folders.
-
-    Args:
-        locations: The test mount points.
-        monkeypatch: Pytest monkeypatch fixture.
-
-    Returns:
-        The runner.
-    """
-    for kind in MountKind:
-        monkeypatch.setenv(
-            f"MEDIA_DEDUP_{kind.value.upper()}_DIR", str(locations.path_of(kind))
-        )
-    build_demo(locations.data_dir)
-    return CliRunner()
-
-
-def run(runner: CliRunner, *args: str) -> Result:
-    """Invoke the CLI with `args`."""
-    return runner.invoke(build_app(), list(args), catch_exceptions=False)
 
 
 def test_help_is_translated() -> None:

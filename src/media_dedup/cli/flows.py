@@ -5,15 +5,18 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
+from media_dedup.console.crosscheck_view import show_cross_check
 from media_dedup.console.formatting import human_number, human_size
 from media_dedup.console.progress import RichProgress
 from media_dedup.console.tables import findings_table, folder_pairs_view
-from media_dedup.errors import MediaDedupError
+from media_dedup.errors import CrossCheckError, MediaDedupError
 from media_dedup.i18n import _
 from media_dedup.services.audit import AuditService
+from media_dedup.services.crosscheck import cross_check
 from media_dedup.services.reporting import write_report
 
 if TYPE_CHECKING:
+    from media_dedup.crosscheck.compare import CrossCheckResult
     from media_dedup.plan.models import AuditFindings, CleanPlan
     from media_dedup.report.views import ReportRecord
     from media_dedup.services.runtime import Runtime
@@ -39,6 +42,35 @@ def audit_and_show(runtime: Runtime) -> AuditFindings:
         output.show(pairs)
         output.blank()
     return findings
+
+
+def show_second_opinion(
+    runtime: Runtime, findings: AuditFindings
+) -> CrossCheckResult | None:
+    """Show Czkawka's verdict on this audit, or say it was not cross-checked.
+
+    Information only: unusable Czkawka results are a warning, never an error.
+
+    Args:
+        runtime: Settings, mount points and output.
+        findings: The audit just run.
+
+    Returns:
+        The comparison, or None without Czkawka results.
+    """
+    try:
+        result = cross_check(runtime, findings)
+    except CrossCheckError as exc:  # information only: never blocks a clean
+        runtime.output.warning(exc.message)
+        return None
+    if result is None:
+        runtime.output.info(
+            _("Not cross-checked: 'media-dedup crosscheck' compares with Czkawka.")
+        )
+        return None
+    show_cross_check(runtime.output, result, runtime.mapper)
+    runtime.output.blank()
+    return result
 
 
 def report_and_announce(runtime: Runtime, record: ReportRecord) -> None:

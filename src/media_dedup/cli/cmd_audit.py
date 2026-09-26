@@ -14,6 +14,7 @@ from media_dedup.constants import RunKind
 from media_dedup.i18n import _
 from media_dedup.paths.mount_kind import MountKind
 from media_dedup.report.views import ReportRecord
+from media_dedup.services.crosscheck import czkawka_command
 
 
 def audit_command(  # pylint: disable=too-many-arguments
@@ -49,6 +50,14 @@ def audit_command(  # pylint: disable=too-many-arguments
                 size=human_size(plan.reclaimable),
             ),
         )
+        if plan.decisions:
+            output.tip(
+                _(
+                    "Second opinion: run Czkawka, an independent duplicate finder, on "
+                    "the same folders, then 'media-dedup crosscheck' (same -v options):"
+                ),
+            )
+            output.command(czkawka_command(runtime).render())
         if not runtime.settings.folders.preferred:
             output.tip(
                 _(

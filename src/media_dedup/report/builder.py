@@ -14,7 +14,7 @@ from media_dedup.report.group_views import (
     sample_groups,
 )
 from media_dedup.report.pair_views import PairRenderer, sampled_files
-from media_dedup.report.summary import ReportSummary
+from media_dedup.report.summary import CrossCheckSummary, ReportSummary
 from media_dedup.report.thumbnails import PREVIEWABLE, ThumbnailJob, thumbnail_name
 from media_dedup.report.views import (
     BrokenSection,
@@ -88,6 +88,7 @@ class ReportBuilder:
             freed_bytes=record.outcome.bytes_done if record.outcome else 0,
             run_id=record.run_id,
             plan_file=PLAN_CSV_FILE_NAME,
+            crosscheck=CrossCheckSummary.of(record.crosscheck),
         )
 
     def view(self, record: ReportRecord, previews: set[Path]) -> ReportView:

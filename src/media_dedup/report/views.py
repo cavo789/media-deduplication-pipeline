@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from media_dedup.actions.outcome import Outcome
     from media_dedup.constants import BrokenReason, RunKind
+    from media_dedup.crosscheck.compare import CrossCheckResult
     from media_dedup.plan.models import AuditFindings
     from media_dedup.report.summary import ReportSummary
 
@@ -20,6 +21,7 @@ class ReportRecord:
     findings: AuditFindings
     outcome: Outcome | None = None
     run_id: str | None = None
+    crosscheck: CrossCheckResult | None = None
 
 
 @dataclass(frozen=True, slots=True)

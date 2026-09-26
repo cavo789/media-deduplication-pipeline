@@ -9,7 +9,12 @@ import typer
 
 from media_dedup.cli import options
 from media_dedup.cli.context import folder_layer, runtime_of, scan_layer, user_errors
-from media_dedup.cli.flows import audit_and_show, confirm_clean, report_and_announce
+from media_dedup.cli.flows import (
+    audit_and_show,
+    confirm_clean,
+    report_and_announce,
+    show_second_opinion,
+)
 from media_dedup.console.progress import RichProgress
 from media_dedup.console.tables import outcome_table
 from media_dedup.constants import ExitCode, RunKind
@@ -54,6 +59,7 @@ def clean_command(  # pylint: disable=too-many-arguments
         service.ensure_ready()
         findings = audit_and_show(runtime)
         plan = service.feasible(findings.plan)
+        verdict = None if plan.is_empty else show_second_opinion(runtime, findings)
         if plan.is_empty:
             output.success(_("Nothing to clean: no duplicate and no broken file."))
             return
@@ -65,7 +71,13 @@ def clean_command(  # pylint: disable=too-many-arguments
         output.show(outcome_table(outcome, _("Clean {run_id}").format(run_id=run_id)))
         report_and_announce(
             runtime,
-            ReportRecord(RunKind.CLEAN, replace(findings, plan=plan), outcome, run_id),
+            ReportRecord(
+                RunKind.CLEAN,
+                replace(findings, plan=plan),
+                outcome,
+                run_id,
+                crosscheck=verdict,
+            ),
         )
     _after_clean_tips(output, run_id, outcome)
 

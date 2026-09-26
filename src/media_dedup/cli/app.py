@@ -7,6 +7,7 @@ import typer
 from media_dedup.cli.cmd_audit import audit_command
 from media_dedup.cli.cmd_clean import clean_command
 from media_dedup.cli.cmd_config import config_command
+from media_dedup.cli.cmd_crosscheck import crosscheck_command
 from media_dedup.cli.cmd_history import history_command
 from media_dedup.cli.cmd_purge import purge_command
 from media_dedup.cli.cmd_reports import reports_command
@@ -73,6 +74,15 @@ def build_app() -> typer.Typer:
             _(
                 "Find exact duplicates and broken files. "
                 "Read-only: mount folders with :ro."
+            ),
+        ),
+        (
+            "crosscheck",
+            crosscheck_command,
+            analyse,
+            _(
+                "Compare a fresh audit with Czkawka's results: a second, "
+                "independent opinion."
             ),
         ),
         (

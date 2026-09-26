@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from media_dedup.constants import KeepReason
-    from media_dedup.scan.models import BrokenFile, MediaFile
+    from media_dedup.scan.models import BrokenFile, DuplicateGroup, MediaFile
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,7 +82,7 @@ class CleanPlan:
 
 @dataclass(frozen=True, slots=True)
 class AuditFindings:
-    """Result of an audit: how much was scanned, and the plan derived from it."""
+    """Result of an audit: how much was scanned, the groups found, and the plan."""
 
     files_scanned: int
     roots: tuple[Path, ...]
@@ -91,3 +91,4 @@ class AuditFindings:
     folder_files: Mapping[Path, int] = field(
         default_factory=lambda: MappingProxyType({})
     )
+    groups: tuple[DuplicateGroup, ...] = ()

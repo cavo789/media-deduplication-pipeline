@@ -89,6 +89,14 @@ class Output:
         """
         self.console.print(f"💡 [cyan]{text}[/]")
 
+    def command(self, text: str) -> None:
+        """Print a command to copy and paste, never cut by a line break.
+
+        Args:
+            text: The command, printed as is (no markup, no highlighting).
+        """
+        self.console.print(text, soft_wrap=True, markup=False, highlight=False)
+
     def show(self, renderable: RenderableType) -> None:
         """Print any Rich renderable (tables, panels).
 

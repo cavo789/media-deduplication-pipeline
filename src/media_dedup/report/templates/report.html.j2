@@ -35,6 +35,19 @@
   <div class="card"><div class="value">{{ s.broken_files | number }}</div><div class="label">{{ _("broken files") }}</div></div>
 </div>
 
+{% if s.crosscheck %}
+{% set c = s.crosscheck %}
+<div class="note">
+  {% if c.agrees %}
+  <strong>🤝 {{ _("Czkawka agrees: the same {copies} extra copies in {groups} groups.").format(copies=c.copies | number, groups=c.groups | number) }}</strong>
+  {% else %}
+  <strong>⚠️ {{ _("Czkawka disagrees on {count} groups: look at them before cleaning.").format(count=(c.only_media_dedup + c.only_czkawka) | number) }}</strong>
+  <br>{{ _("Found by media-dedup only: {ours}. Found by Czkawka only: {theirs}. The terminal lists them.").format(ours=c.only_media_dedup | number, theirs=c.only_czkawka | number) }}
+  {% endif %}
+  <br><span class="muted">{{ _("Czkawka is an independent duplicate finder.") }}{% if c.results_date %} {{ _("Czkawka results of {date} UTC.").format(date=c.results_date.strftime("%Y-%m-%d %H:%M")) }}{% endif %}{% if c.set_aside %} {{ _("Files set aside, as media-dedup does not analyse them: {count}.").format(count=c.set_aside | number) }}{% endif %}</span>
+</div>
+{% endif %}
+
 {% if s.plan_file %}
 <p>📄 <a href="{{ s.plan_file }}">{{ _("The whole plan as a spreadsheet (CSV): every group, every file") }}</a></p>
 {% endif %}

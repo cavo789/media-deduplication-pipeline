@@ -249,6 +249,7 @@ Chaque montage manquant est expliqué par une astuce 💡. L'image fonctionne au
 | `history` | Liste les nettoyages : fichiers supprimés, espace libéré, quarantaine, restaurations. |
 | `reports [--prune N]` | Liste les rapports et régénère `index.html` ; `--prune N` garde les N plus récents. |
 | `purge [EXÉCUTION]` | Supprime définitivement la quarantaine d'un nettoyage (de tous par défaut). |
+| `crosscheck` | Refait l'audit, puis le compare aux résultats de [Czkawka](#demander-un-second-avis-à-czkawka), un détecteur de doublons indépendant. |
 | `config` | Affiche chaque réglage, son origine, et l'état de chaque point de montage. |
 
 Les options globales se placent **avant** la commande : `media-dedup --locale fr audit`.
@@ -258,10 +259,10 @@ Les options globales se placent **avant** la commande : `media-dedup --locale fr
 | `--locale en\|fr` | Langue de l'interface (anglais par défaut) ; les nombres et tailles la suivent : `67,947` et `44.3 GB`, ou `67.947` et `44,3 Go`. |
 | `--verbosity error\|warning\|info\|debug` | Niveau de détail des journaux. |
 | `--color auto\|always\|never` | Couleurs ANSI (`NO_COLOR` est respecté). |
-| `--prefer CHEMIN` | (`audit`, `clean`) Dossier dont les copies sont conservées en priorité ; répétable, l'ordre compte. |
-| `--protect CHEMIN` | (`audit`, `clean`) Dossier jamais modifié ; ses fichiers sont les copies conservées. |
-| `--exclude CHEMIN` | (`audit`, `clean`) Dossier jamais analysé. |
-| `--ext EXT` | (`audit`, `clean`) N'analyse que ces extensions (`--ext png,webp`) ; toutes celles prises en charge par défaut. |
+| `--prefer CHEMIN` | (`audit`, `clean`, `crosscheck`) Dossier dont les copies sont conservées en priorité ; répétable, l'ordre compte. |
+| `--protect CHEMIN` | (`audit`, `clean`, `crosscheck`) Dossier jamais modifié ; ses fichiers sont les copies conservées. |
+| `--exclude CHEMIN` | (`audit`, `clean`, `crosscheck`) Dossier jamais analysé. |
+| `--ext EXT` | (`audit`, `clean`, `crosscheck`) N'analyse que ces extensions (`--ext png,webp`) ; toutes celles prises en charge par défaut. |
 | `--yes`, `-y` | (`clean`, `purge`) Ne pas demander de confirmation. |
 
 `media-dedup --help` et `media-dedup <commande> --help` documentent tout, dans les deux langues.
@@ -397,27 +398,44 @@ Le rapport (`-v "…:/reports"`) est fait pour ça :
 ### Demander un second avis à Czkawka
 
 [Czkawka](https://github.com/qarmin/czkawka) est un détecteur de doublons indépendant et open
-source, écrit différemment et avec une autre fonction de hachage. L'image communautaire
-`jlesage/czkawka` (environ 500 Mo) contient son outil en ligne de commande. Lancez-le avec les
-**mêmes options `-v` que votre audit**. Les options ci-dessous lui donnent le même périmètre
-que media-dedup : toutes les tailles de fichier (`-m 1`) et les mêmes extensions (`-x`) :
+source, écrit différemment et avec une autre fonction de hachage. Deux outils écrits
+indépendamment font rarement la même erreur : s'ils sont d'accord, vous pouvez nettoyer en
+confiance.
+
+**1. Lancez l'audit avec un dossier de rapports.** Quand il trouve des doublons, `audit` se
+termine par une astuce *Second avis* et la commande Czkawka exacte pour vos dossiers : mêmes
+options `-v`, mêmes extensions, mêmes dossiers exclus, toutes les tailles de fichier. Elle
+ressemble à ceci (l'image communautaire `jlesage/czkawka`, environ 500 Mo, contient l'outil en
+ligne de commande de Czkawka) :
 
 ```powershell
-docker run --rm -v "C:\Photos:/data/c/Photos:ro" jlesage/czkawka `
-  czkawka_cli dup -d /data -m 1 -W `
+docker run --rm -v "C:\Photos:/data/c/Photos:ro" -v "$HOME\media-dedup\reports:/out" `
+  jlesage/czkawka:v26.09.2 czkawka_cli dup -d /data -m 1 -W -N -C /out/czkawka.json `
   -x 3g2,3gp,arw,avi,avif,bmp,cr2,cr3,dng,flv,gif,heic,heif,jpe,jpeg,jpg,m2ts,m4v,mkv,mov,mp4,mpeg,mpg,mts,nef,orf,pef,png,raf,rw2,srw,tif,tiff,ts,webm,webp,wmv
 ```
 
-Sa ligne de synthèse, *Found N duplicated files which in G groups*, doit correspondre aux
-*Copies en trop, supprimables* (N) et aux *Groupes de fichiers identiques* (G) de media-dedup.
-Causes connues d'un petit écart :
+**2. Collez-la et lancez-la.** Czkawka écrit ses résultats, `czkawka.json`, dans votre dossier
+de rapports. Depuis WSL, écrivez vos dossiers `/mnt/c/...` au lieu de `C:\...`.
 
-- des dossiers exclus dans `config.toml` : ajoutez `-e /data/c/Photos/<dossier>` à Czkawka ;
-- un filtre `--ext` sur l'audit ;
-- les fichiers cassés : media-dedup écarte les fichiers illisibles des groupes.
+**3. Comparez**, avec les mêmes options que l'audit :
 
-Deux outils écrits indépendamment font rarement la même erreur. S'ils sont d'accord, vous
-pouvez nettoyer en confiance ; sinon, regardez les différences avant de nettoyer.
+```powershell
+docker run --rm -it -v "C:\Photos:/data/c/Photos:ro" `
+  -v "$HOME\media-dedup\reports:/reports" -v media-dedup-cache:/cache `
+  cavo789/media-dedup crosscheck
+```
+
+`crosscheck` refait l'audit (rapidement, grâce au cache) et compare les deux outils groupe par
+groupe :
+
+- *Czkawka est d'accord : les mêmes N copies en trop dans G groupes* ;
+- ou *Czkawka n'est pas d'accord sur N groupes*, avec la liste des groupes trouvés par un seul
+  des deux outils. Regardez-les avant de nettoyer.
+
+Les fichiers que media-dedup laisse volontairement de côté sont mis à part et comptés, pas
+signalés comme des différences : autres types de fichiers, dossiers exclus ou système, fichiers
+cassés. Le verdict figure aussi dans le rapport HTML, et `clean` le rappelle avant de demander
+confirmation. C'est une information : `clean` ne l'exige jamais.
 
 ### Recommandations
 
