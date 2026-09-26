@@ -38,8 +38,12 @@ function ci_logs() {
     )
 }
 
-# _gh_ready — fail with a hint when the GitHub CLI is not logged in.
+# _gh_ready — fail with a hint when the GitHub CLI is missing or not logged in.
 function _gh_ready() {
+    if ! command -v gh >/dev/null 2>&1; then
+        printf "❌ The GitHub CLI is not installed: rebuild the devcontainer.\n" >&2
+        return 1
+    fi
     if ! gh auth status >/dev/null 2>&1; then
         printf "❌ The GitHub CLI is not logged in: run 'gh auth login' once.\n" >&2
         return 1
