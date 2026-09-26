@@ -219,7 +219,7 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 ```
 
 **Update** — `docker pull cavo789/media-dedup` fetches the latest version; a tag such as
-`cavo789/media-dedup:0.1.1` pins one.
+`cavo789/media-dedup:0.2.0` pins one.
 
 ### Near duplicates and bursts
 

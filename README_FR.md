@@ -229,7 +229,7 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 ```
 
 **Mettre à jour** : `docker pull cavo789/media-dedup` récupère la dernière version ; un tag comme
-`cavo789/media-dedup:0.1.1` en fixe une.
+`cavo789/media-dedup:0.2.0` en fixe une.
 
 ### Quasi-doublons et rafales
 
