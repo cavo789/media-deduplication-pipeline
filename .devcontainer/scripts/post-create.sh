@@ -14,7 +14,8 @@ readonly WORKSPACE_DIR
 # Named volumes come back root-owned (first mount) or owned by the image's default UID, which
 # updateRemoteUserUID may have changed since — take them back before anything writes there.
 reclaim_volumes() {
-    sudo chown -R "$(id -u):$(id -g)" "${HOME}/.bash_history" "${HOME}/.claude"
+    sudo chown -R "$(id -u):$(id -g)" "${HOME}/.bash_history" "${HOME}/.claude" \
+        "${HOME}/.config"
 }
 
 install_project() {

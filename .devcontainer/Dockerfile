@@ -8,6 +8,8 @@ ARG PYTHON_IMAGE=python:3.14-slim-trixie
 # Pinned to the same versions as the root Dockerfile so local runs never drift from the image.
 ARG UV_VERSION=0.12.19
 ARG FFMPEG_VERSION=9.0.2
+# GitHub CLI: CI logs (gh run view --log-failed), runs and pull requests from the terminal.
+ARG GH_VERSION=2.101.0
 
 FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
 FROM mwader/static-ffmpeg:${FFMPEG_VERSION} AS ffmpeg
@@ -61,6 +63,20 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 COPY --from=uv /uv /uvx /usr/local/bin/
 COPY --from=ffmpeg /ffmpeg /ffprobe /usr/local/bin/
 
+# The release archive of this machine's architecture, checked against the published SHA-256
+# before it is unpacked. pipefail: a failed download must not reach sha256sum as empty input.
+ARG GH_VERSION
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN set -eux && \
+    archive="gh_${GH_VERSION}_linux_$(dpkg --print-architecture)" && \
+    release="https://github.com/cli/cli/releases/download/v${GH_VERSION}" && \
+    curl -fsSL -o "/tmp/${archive}.tar.gz" "${release}/${archive}.tar.gz" && \
+    curl -fsSL "${release}/gh_${GH_VERSION}_checksums.txt" | \
+    grep " ${archive}.tar.gz$" | sed "s|  | /tmp/|" | sha256sum --check --strict - && \
+    tar -xzf "/tmp/${archive}.tar.gz" -C /tmp && \
+    install -m 0755 "/tmp/${archive}/bin/gh" /usr/local/bin/gh && \
+    rm -rf "/tmp/${archive}" "/tmp/${archive}.tar.gz"
+
 # Passwordless sudo: post-create.sh must chown the named volumes (bash history, ~/.claude),
 # which Docker hands over root- or old-UID-owned on first mount. Devcontainer only — never
 # copy this line into the root Dockerfile.
@@ -74,10 +90,12 @@ USER ${DEV_USER}
 
 # Mount points for the named volumes declared in devcontainer.json. History is a directory
 # (not a file) so the volume can be mounted without Docker creating a directory in its place.
-# ~/.ssh receives the host's keys, bind-mounted read-only (git push over SSH).
+# ~/.ssh receives the host's keys, bind-mounted read-only (git push over SSH). ~/.config is a
+# volume: tool settings and logins (e.g. the GitHub CLI token) survive rebuilds and never
+# land in the workspace. Nothing may be baked into ~/.config here: the volume would hide it.
 RUN mkdir -p "/home/${DEV_USER}/.bash_history" "/home/${DEV_USER}/.claude" \
-    "/home/${DEV_USER}/.cache" "/home/${DEV_USER}/.ssh" && \
-    chmod 700 "/home/${DEV_USER}/.ssh" && \
+    "/home/${DEV_USER}/.cache" "/home/${DEV_USER}/.ssh" "/home/${DEV_USER}/.config" && \
+    chmod 700 "/home/${DEV_USER}/.ssh" "/home/${DEV_USER}/.config" && \
     touch "/home/${DEV_USER}/.bash_history/.bash_history"
 
 # Persistent history, a recognisable prompt, and the cheatsheet on every interactive shell.

@@ -20,6 +20,7 @@
   "mounts": [
     "source=media-dedup-bashhistory,target=/home/vscode/.bash_history,type=volume",
     "source=media-dedup-claude,target=/home/vscode/.claude,type=volume",
+    "source=media-dedup-config,target=/home/vscode/.config,type=volume",
     "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,readonly"
   ],
   "remoteUser": "vscode",

@@ -496,6 +496,12 @@ shows the cheatsheet of helper commands (`welcome` redraws it):
 | `release` | Tag `vX.Y.Z` (the `pyproject.toml` version) and push it: CI publishes the image. |
 | `i18n_extract`, `i18n_update` | Refresh the gettext catalogs after changing a user-facing string. |
 | `todos` | List the open backlog (`.todos/`, see `/todo` and `/todo-plan`). |
+| `ci`, `ci_logs` | Latest CI runs of the branch; logs of the failed steps of the latest failed run. The GitHub CLI asks for `gh auth login` once. |
+
+Settings and logins of the tools (`~/.config`, e.g. the GitHub CLI token) live in the
+`media-dedup-config` Docker volume, outside the workspace: they survive rebuilds and can never
+be committed. Never write a token in a tracked file (`devcontainer.json` included): this
+repository is public.
 
 Code rules (enforced by the tooling): everything typed, at most 200 lines per file and 3
 parameters per function, code in English, every user-facing string translated through gettext.

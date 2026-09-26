@@ -48,6 +48,9 @@ export -f reports_stop
 export -f i18n_extract
 export -f i18n_update
 export -f todos
+export -f ci
+export -f ci_logs
+export -f _gh_ready
 export -f welcome
 
 # Display on startup

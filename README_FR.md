@@ -528,6 +528,12 @@ terminal affiche la liste des commandes d'aide (`welcome` la réaffiche) :
 | `release` | Crée le tag `vX.Y.Z` (la version de `pyproject.toml`) et le pousse : la CI publie l'image. |
 | `i18n_extract`, `i18n_update` | Met à jour les catalogues gettext après la modification d'un texte affiché. |
 | `todos` | Liste les TODOs ouverts (`.todos/`, voir `/todo` et `/todo-plan`). |
+| `ci`, `ci_logs` | Dernières exécutions de la CI sur la branche ; logs des étapes en échec de la dernière exécution ratée. La CLI GitHub demande `gh auth login` une fois. |
+
+Les réglages et connexions des outils (`~/.config`, p. ex. le jeton de la CLI GitHub) sont
+dans le volume Docker `media-dedup-config`, hors de l'espace de travail : ils survivent aux
+reconstructions et ne peuvent jamais être commités. N'écrivez jamais de jeton dans un fichier
+suivi par git (`devcontainer.json` compris) : ce dépôt est public.
 
 Règles de code, appliquées par l'outillage :
 

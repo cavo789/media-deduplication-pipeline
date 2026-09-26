@@ -55,6 +55,7 @@ reports / reports_stop  # serve /tmp/media-dedup/reports on an OS-chosen port
 build / dive / dive_ci  # build media-dedup:latest, inspect, gate the image layers
 release               # tag vX.Y.Z from pyproject.toml and push it: CI builds amd64+arm64, e2e, publishes
 i18n_update           # after changing any _() string: extract + merge, then translate the .po
+ci / ci_logs          # gh: latest CI runs of the branch / logs of the failed steps (gh auth login once)
 ```
 
 Without the helpers: `uv run pytest`, `uv run mypy`, `uv run pylint src`,
