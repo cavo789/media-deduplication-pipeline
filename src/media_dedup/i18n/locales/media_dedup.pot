@@ -299,6 +299,11 @@ msgstr ""
 msgid "Mount"
 msgstr ""
 
+msgid ""
+"Mount each folder only once (a folder already includes its subfolders): "
+"remove one of these -v options."
+msgstr ""
+
 msgid "Mount points"
 msgstr ""
 
@@ -520,6 +525,12 @@ msgid ""
 msgstr ""
 
 #, python-brace-format
+msgid ""
+"The same folder is mounted twice: {folders}. Each of its files would look"
+" like a duplicate of itself."
+msgstr ""
+
+#, python-brace-format
 msgid "These folders are mounted read-only: {folders}."
 msgstr ""
 
@@ -623,6 +634,9 @@ msgstr ""
 msgid "freed"
 msgstr ""
 
+msgid "it is the kept copy itself, seen through another path"
+msgstr ""
+
 #, python-brace-format
 msgid "its copy {path} is gone"
 msgstr ""
@@ -694,10 +708,24 @@ msgstr[0] ""
 msgstr[1] ""
 
 #, python-brace-format
+msgid ""
+"{count} file is reachable through two paths (hard link, or folder mounted"
+" twice): it is analysed once, e.g. {path} is {same_as}."
+msgid_plural ""
+"{count} files are reachable through two paths (hard links, or folder "
+"mounted twice): each is analysed once, e.g. {path} is {same_as}."
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
 msgid "{count} report deleted."
 msgid_plural "{count} reports deleted."
 msgstr[0] ""
 msgstr[1] ""
+
+#, python-brace-format
+msgid "{folder} (seen as {first} and as {second})"
+msgstr ""
 
 #, python-brace-format
 msgid "{name} must be a JSON array, e.g. [\"C:\\\\Photos\"]"

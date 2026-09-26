@@ -12,6 +12,14 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True, slots=True)
+class FileIdentity:
+    """A file's identity on its filesystem: two paths, one identity, one file."""
+
+    device: int
+    inode: int
+
+
+@dataclass(frozen=True, slots=True)
 class MediaFile:
     """A media file as seen when the scan listed it."""
 
@@ -19,6 +27,7 @@ class MediaFile:
     size: int
     mtime_ns: int
     kind: MediaKind
+    identity: FileIdentity | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -41,6 +41,22 @@ def docker(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def run_image(*args: str) -> subprocess.CompletedProcess[str]:
+    """Run a container to completion, then read its output from the logs.
+
+    Some Docker setups (Docker Desktop through a mounted socket) cut the attached
+    output after about a second; the logs are always complete.
+    """
+    started = docker("run", "--detach", *args)
+    container = started.stdout.strip()
+    if started.returncode != 0:
+        return started
+    code = docker("wait", container).stdout.strip()
+    logs = docker("logs", container)
+    docker("rm", container)
+    return subprocess.CompletedProcess(args, int(code), logs.stdout, logs.stderr)
+
+
 @pytest.fixture
 def volumes(tmp_path: Path) -> Iterator[dict[str, str]]:
     """Named volumes for every mount point, the data one filled with the demo tree."""
@@ -66,16 +82,14 @@ def tool(volumes: dict[str, str], *args: str, read_only_data: bool = False) -> s
     # --read-only: the image must work with an immutable root filesystem (the tmpfs
     # is inside the container, not a host temporary file).
     hardening = ["--read-only", "--tmpfs", "/tmp"]  # noqa: S108
-    result = docker("run", "--rm", *hardening, *mounts, IMAGE, *args)
+    result = run_image(*hardening, *mounts, IMAGE, *args)
     return f"{result.returncode}\n{result.stdout}{result.stderr}"
 
 
 def manifest(volumes: dict[str, str]) -> dict[str, list[object]]:
     """SHA-256 and mtime of every file of the data volume."""
     data = f"{volumes['data']}:/data:ro"
-    result = docker(
-        "run",
-        "--rm",
+    result = run_image(
         "--entrypoint",
         "python",
         "-v",

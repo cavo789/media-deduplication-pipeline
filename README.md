@@ -127,7 +127,10 @@ docker run --rm -it -v "C:\Photos:/data/c/Photos:ro" cavo789/media-dedup audit -
 ```
 
 **Several folders, several disks** — one `-v` per folder: `X:\path` is mounted on
-`/data/x/path`. Quotes make paths with spaces work.
+`/data/x/path`. Quotes make paths with spaces work. Mount each folder once: a folder already
+includes its subfolders, and the tool refuses a folder visible twice (`C:\Photos` plus
+`C:\photos\2019`: Windows ignores case, Docker does not), whose photos would look like
+duplicates of themselves.
 
 ```powershell
 docker run --rm -it `
@@ -193,7 +196,8 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 |---|---|
 | `audit` | Read-only: mount your folders with `:ro` and Docker itself forbids any write. |
 | Which copy is kept | Deterministic: a protected folder, then your preferred folders (in order), then a name that does not look like a copy (`IMG (1).jpg`, `IMG - Copie.jpg`, …), the oldest date, the shortest path. |
-| Before each deletion | The kept copy must still exist and still be byte-for-byte identical — otherwise the file is skipped. |
+| One file, two paths | A folder mounted twice is refused; a file reachable through two paths (hard link) is analysed once — never a duplicate of itself. |
+| Before each deletion | The kept copy must still exist, be another file, and still be byte-for-byte identical — otherwise the file is skipped. |
 | Each action | Written to the journal *before* (`pending`) and *after* (`done`) it happens: an interruption never loses track. |
 | Duplicates | Really deleted (the space is freed immediately); `undo` rebuilds them from the kept copy, date included, even across disks. |
 | Unreadable files | Moved to the quarantine, never deleted outright; `purge` deletes them for good when you are sure. |

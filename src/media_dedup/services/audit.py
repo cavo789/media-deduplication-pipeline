@@ -14,11 +14,16 @@ from media_dedup.index.repository import FactsRepository
 from media_dedup.paths.mount_kind import MountKind
 from media_dedup.plan.models import AuditFindings
 from media_dedup.plan.planner import build_plan
+from media_dedup.scan.aliases import unique_files
 from media_dedup.scan.broken import BrokenFileFinder
 from media_dedup.scan.deps import IntegrityTools, ScanDeps
 from media_dedup.scan.exact import ExactDuplicateFinder
 from media_dedup.scan.progress import Step
 from media_dedup.scan.walker import walk
+from media_dedup.services.data_checks import (
+    refuse_overlapping_mounts,
+    warn_about_aliases,
+)
 from media_dedup.services.policy import keep_policy, scan_filters, unmounted_folders
 
 if TYPE_CHECKING:
@@ -49,7 +54,8 @@ class AuditService:
             The findings and the plan.
 
         Raises:
-            MountError: Nothing is mounted under the data directory.
+            MountError: Nothing is mounted under the data directory, or a folder is
+                mounted twice.
         """
         runtime, started = self._runtime, time.monotonic()
         data_dir = runtime.locations.data_dir
@@ -58,6 +64,7 @@ class AuditService:
                 _("No folder to analyse under {path}.").format(path=data_dir),
                 _('Mount your folders, e.g. -v "C:\\Photos:/data/c/Photos:ro".'),
             )
+        refuse_overlapping_mounts(runtime)
         _warn_about_scope(runtime)
         roots = runtime.mounts.data_roots(data_dir)
         files = self._list_files(roots)
@@ -87,7 +94,7 @@ class AuditService:
         )
 
     def _list_files(self, roots: tuple[Path, ...]) -> list[MediaFile]:
-        """Walk every root, without listing a file twice (nested mounts).
+        """Walk every root, without listing a file twice (nested mounts, hard links).
 
         Args:
             roots: Mounted folders.
@@ -106,8 +113,9 @@ class AuditService:
         self._progress.start(step, None)
         found = asyncio.run(walk(roots, filters, self._progress))
         self._progress.stop()
-        unique = {file.path: file for file in found}
-        return [unique[path] for path in sorted(unique)]
+        unique = unique_files(found)
+        warn_about_aliases(self._runtime, unique.aliases)
+        return list(unique.files)
 
 
 def _warn_about_scope(runtime: Runtime) -> None:

@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 
 from media_dedup.constants import Sizes
 from media_dedup.scan.filters import media_kind
-from media_dedup.scan.models import MediaFile
+from media_dedup.scan.models import FileIdentity, MediaFile
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -42,7 +42,7 @@ async def walk(
     """Return the media files below `roots`, as `filters` allows, in no fixed order.
 
     Unreadable folders are logged and skipped: one bad folder never stops the scan.
-    Nested roots list their files twice: callers deduplicate by path.
+    Nested or overlapping roots list their files twice: see `unique_files`.
 
     Args:
         roots: Folders to walk.
@@ -117,4 +117,10 @@ def _media_file(entry: os.DirEntry[str], path: Path) -> MediaFile | None:
     except OSError as exc:
         _LOGGER.warning("Cannot read %s: %s", path, exc.strerror)
         return None
-    return MediaFile(path=path, size=stat.st_size, mtime_ns=stat.st_mtime_ns, kind=kind)
+    return MediaFile(
+        path=path,
+        size=stat.st_size,
+        mtime_ns=stat.st_mtime_ns,
+        kind=kind,
+        identity=FileIdentity(stat.st_dev, stat.st_ino) if stat.st_ino else None,
+    )

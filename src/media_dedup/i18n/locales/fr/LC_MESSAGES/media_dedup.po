@@ -352,6 +352,13 @@ msgstr "Fichiers média analysés"
 msgid "Mount"
 msgstr "Montage"
 
+msgid ""
+"Mount each folder only once (a folder already includes its subfolders): "
+"remove one of these -v options."
+msgstr ""
+"Montez chaque dossier une seule fois (un dossier inclut déjà ses sous-"
+"dossiers) : retirez l'une de ces options -v."
+
 msgid "Mount points"
 msgstr "Points de montage"
 
@@ -608,6 +615,14 @@ msgstr ""
 "dossier les perd."
 
 #, python-brace-format
+msgid ""
+"The same folder is mounted twice: {folders}. Each of its files would look"
+" like a duplicate of itself."
+msgstr ""
+"Le même dossier est monté deux fois : {folders}. Chacun de ses fichiers "
+"passerait pour un doublon de lui-même."
+
+#, python-brace-format
 msgid "These folders are mounted read-only: {folders}."
 msgstr "Ces dossiers sont montés en lecture seule : {folders}."
 
@@ -719,6 +734,9 @@ msgstr "ffprobe introuvable : les vidéos ne sont pas vérifiées."
 msgid "freed"
 msgstr "libérés"
 
+msgid "it is the kept copy itself, seen through another path"
+msgstr "c'est la copie gardée elle-même, vue par un autre chemin"
+
 #, python-brace-format
 msgid "its copy {path} is gone"
 msgstr "sa copie {path} a disparu"
@@ -800,10 +818,30 @@ msgstr[1] ""
 " de chacun est gardé (gain de {size})."
 
 #, python-brace-format
+msgid ""
+"{count} file is reachable through two paths (hard link, or folder mounted"
+" twice): it is analysed once, e.g. {path} is {same_as}."
+msgid_plural ""
+"{count} files are reachable through two paths (hard links, or folder "
+"mounted twice): each is analysed once, e.g. {path} is {same_as}."
+msgstr[0] ""
+"{count} fichier est accessible par deux chemins (lien physique, ou "
+"dossier monté deux fois) : il n'est analysé qu'une fois, p. ex. {path} "
+"est {same_as}."
+msgstr[1] ""
+"{count} fichiers sont accessibles par deux chemins (liens physiques, ou "
+"dossier monté deux fois) : chacun n'est analysé qu'une fois, p. ex. "
+"{path} est {same_as}."
+
+#, python-brace-format
 msgid "{count} report deleted."
 msgid_plural "{count} reports deleted."
 msgstr[0] "{count} rapport supprimé."
 msgstr[1] "{count} rapports supprimés."
+
+#, python-brace-format
+msgid "{folder} (seen as {first} and as {second})"
+msgstr "{folder} (vu comme {first} et comme {second})"
 
 #, python-brace-format
 msgid "{name} must be a JSON array, e.g. [\"C:\\\\Photos\"]"

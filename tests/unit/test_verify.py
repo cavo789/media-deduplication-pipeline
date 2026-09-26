@@ -28,3 +28,13 @@ def test_every_blocker(tmp_path: Path) -> None:
     assert removal_blocker(keeper, copy, 4) == "a file changed since the audit"
     copy.write_bytes(b"diff")
     assert removal_blocker(keeper, copy, 4) == "the files are no longer identical"
+
+
+def test_one_file_reached_through_two_paths_is_never_deleted(tmp_path: Path) -> None:
+    """A hard link, or a folder mounted twice, is the kept file itself: kept."""
+    keeper, alias = tmp_path / "keeper", tmp_path / "alias"
+    keeper.write_bytes(b"same")
+    alias.hardlink_to(keeper)
+    assert removal_blocker(keeper, alias, 4) == (
+        "it is the kept copy itself, seen through another path"
+    )

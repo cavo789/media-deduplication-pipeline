@@ -131,7 +131,10 @@ docker run --rm -it -v "C:\Photos:/data/c/Photos:ro" cavo789/media-dedup --local
 ```
 
 **Plusieurs dossiers, plusieurs disques** : un `-v` par dossier, `X:\chemin` étant monté sur
-`/data/x/chemin`. Grâce aux guillemets, les chemins avec des espaces fonctionnent.
+`/data/x/chemin`. Grâce aux guillemets, les chemins avec des espaces fonctionnent. Montez
+chaque dossier une seule fois : un dossier inclut déjà ses sous-dossiers, et l'outil refuse un
+dossier visible deux fois (`C:\Photos` plus `C:\photos\2019` : Windows ignore la casse,
+Docker non), dont les photos passeraient pour des doublons d'elles-mêmes.
 
 ```powershell
 docker run --rm -it `
@@ -199,7 +202,8 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 |---|---|
 | `audit` | Lecture seule : montez vos dossiers avec `:ro` et Docker lui-même interdit toute écriture. |
 | Copie conservée | Choix déterministe : un dossier protégé, puis vos dossiers préférés (dans l'ordre), puis un nom qui ne ressemble pas à une copie (`IMG (1).jpg`, `IMG - Copie.jpg`, …), la date la plus ancienne, le chemin le plus court. |
-| Avant chaque suppression | La copie conservée doit encore exister et être identique octet par octet ; sinon, le fichier est ignoré. |
+| Un fichier, deux chemins | Un dossier monté deux fois est refusé ; un fichier accessible par deux chemins (lien physique) n'est analysé qu'une fois, jamais comme doublon de lui-même. |
+| Avant chaque suppression | La copie conservée doit encore exister, être un autre fichier et être identique octet par octet ; sinon, le fichier est ignoré. |
 | Chaque action | Écrite dans le journal *avant* (`pending`) et *après* (`done`) : une interruption ne fait jamais perdre le fil. |
 | Doublons | Réellement supprimés (l'espace est libéré tout de suite) ; `undo` les reconstruit depuis la copie conservée, date comprise, même d'un disque à l'autre. |
 | Fichiers illisibles | Déplacés en quarantaine, jamais supprimés directement ; `purge` les supprime définitivement quand vous êtes sûr·e. |
