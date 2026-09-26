@@ -114,7 +114,7 @@ supprimées, et la phrase se termine par l'espace libéré. Les paires qui libè
 viennent en premier. Quand les deux sont le même dossier, les fichiers y sont en double (`IMG_0001.jpg` et
 `IMG_0001 (1).jpg`). Le dossier gardé suit les [règles ci-dessous](#comment-vos-photos-restent-en-sécurité) ;
 ce n'est pas celui que vous voulez ? Indiquez-le dans `--prefer` (ou `folders.preferred`) et
-relancez l'audit.
+relancez l'audit, ou [décidez paire par paire dans le rapport](#aller-plus-loin).
 
 Quand un dossier perd **toutes** ses photos et vidéos, et qu'une copie de chacune est gardée
 dans l'autre dossier, la phrase se termine par *« … ne contient rien d'autre : c'est
@@ -199,6 +199,18 @@ docker run --rm -it `
 `clean` affiche le résumé et demande confirmation (`--yes` s'en passe). Vous changez d'avis ?
 Relancez la même commande en remplaçant `clean` par `undo`.
 
+**Décider dans le rapport** : ce n'est pas le dossier que vous voulez garder ? Dans le tableau
+des *paires de dossiers* d'un rapport d'audit, chaque paire a une liste *Votre décision* :
+*Inverser les dossiers* garde les copies du second dossier et supprime celles du premier ;
+*Ne pas toucher* ne supprime rien de cette paire. Votre navigateur retient vos choix.
+*Téléchargez decisions.json*, enregistrez-le dans le dossier monté sur `/reports`, et ajoutez
+`--decisions decisions.json` à la commande `clean` ci-dessus. La page elle-même ne supprime
+jamais rien : `clean` refait l'audit, applique vos décisions, montre les paires qui en
+résultent et demande confirmation avant de nettoyer, avec toutes les protections (comparaison
+octet par octet, journal, `undo`). Le fichier est refusé si d'autres dossiers sont montés, si
+une paire décidée n'existe plus (des fichiers ont changé depuis le rapport), ou si une
+inversion supprimerait les copies d'un dossier protégé.
+
 **Le dossier courant** : placez-vous dans le dossier avec `cd`, puis lancez la commande
 ci-dessous (dans PowerShell, `${PWD}` est l'équivalent du `$(pwd)` de Linux ; dans l'ancienne
 console `cmd.exe`, écrivez `%cd%`) :
@@ -259,6 +271,9 @@ compagnon appartient aux fichiers de son dossier qui portent le même nom : `IMG
 `IMG_1.jpg` ou `IMG_1.CR2`, et `IMG_1.CR2.xmp` à `IMG_1.CR2`, sans tenir compte de la casse.
 
 - **À côté de sa photo**, un fichier compagnon n'est jamais touché.
+- **Sa photo est gardée** : entre des copies identiques, celle qui a un fichier compagnon est
+  gardée, et elle conserve ainsi ses retouches. Seul un dossier protégé ou préféré passe avant.
+  Quand plusieurs copies ont chacune leur fichier compagnon, les autres règles les départagent.
 - **Orphelin** : une fois que `clean` a supprimé ou déplacé tous les fichiers du même nom à
   côté de lui (ou s'il n'y en avait déjà aucun), un fichier compagnon ne sert plus à rien.
   `clean` le déplace en quarantaine, sans jamais le supprimer, après avoir vérifié qu'aucun
@@ -269,9 +284,9 @@ compagnon appartient aux fichiers de son dossier qui portent le même nom : `IMG
   laisse seuls sont déplacés.
 - **Les dossiers protégés** ne sont jamais modifiés, fichiers compagnons compris.
 
-Le fichier compagnon d'une copie supprimée n'est pas déplacé à côté de la copie gardée. Pour
-garder une photo *avec* ses retouches, assurez-vous que c'est cette copie-là qui est gardée :
-indiquez son dossier dans `--prefer`.
+Le fichier compagnon d'une copie supprimée n'est pas déplacé à côté de la copie gardée : il
+devient orphelin. Pour garder une autre copie *avec* ses retouches, indiquez son dossier dans
+`--prefer`.
 
 ### Autres types de fichiers
 
@@ -318,7 +333,7 @@ les programmes et leurs données s'y trouvent aussi.
 | Étape | Garantie |
 |---|---|
 | `audit` | Lecture seule : montez vos dossiers avec `:ro` et Docker lui-même interdit toute écriture. |
-| Copie conservée | Choix déterministe : un dossier protégé, puis vos dossiers préférés (dans l'ordre), puis un nom qui ne ressemble pas à une copie (`IMG (1).jpg`, `IMG - Copie.jpg`, …), un nom choisi par quelqu'un plutôt que généré par un appareil photo ou une application (`Marie et Paul.jpg` plutôt que `IMG_1234.jpg`), un dossier nommé par quelqu'un plutôt qu'un dossier générique (`Vacances 2019` plutôt que `DCIM\100CANON`), la date la plus ancienne, le chemin le plus court. Le rapport indique, pour chaque groupe, la règle qui a décidé. |
+| Copie conservée | Choix déterministe : un dossier protégé, puis vos dossiers préférés (dans l'ordre), puis la copie qui a un [fichier compagnon](#fichiers-compagnons) (ses retouches), un nom qui ne ressemble pas à une copie (`IMG (1).jpg`, `IMG - Copie.jpg`, …), un nom choisi par quelqu'un plutôt que généré par un appareil photo ou une application (`Marie et Paul.jpg` plutôt que `IMG_1234.jpg`), un dossier nommé par quelqu'un plutôt qu'un dossier générique (`Vacances 2019` plutôt que `DCIM\100CANON`), la date la plus ancienne, le chemin le plus court. Le rapport indique, pour chaque groupe, la règle qui a décidé. Vos [décisions dans le rapport](#aller-plus-loin) (`--decisions`) passent par-dessus. |
 | Un fichier, deux chemins | Un dossier monté deux fois est refusé ; un fichier accessible par deux chemins (lien physique) n'est analysé qu'une fois, jamais comme doublon de lui-même. |
 | Avant chaque suppression | La copie conservée doit encore exister, être un autre fichier et être identique octet par octet ; sinon, le fichier est ignoré. |
 | Chaque action | Écrite dans le journal *avant* (`pending`) et *après* (`done`) : une interruption ne fait jamais perdre le fil. |
@@ -340,8 +355,8 @@ les programmes et leurs données s'y trouvent aussi.
 | `/reports` | Un dossier par exécution (`report.html`, une page par paire de dossiers, vignettes, `plan.csv`) et `index.html`. | facultatif |
 | `/cache` | Index SQLite : les audits suivants ne relisent que les fichiers nouveaux ou modifiés. | facultatif, recommandé |
 
-Chaque montage manquant est expliqué par une astuce 💡. L'image fonctionne aussi avec
-`--read-only --tmpfs /tmp`.
+Chaque montage manquant ou non accessible en écriture est expliqué par une astuce 💡. L'image
+fonctionne aussi avec `--read-only --tmpfs /tmp`.
 
 ## Commandes
 
@@ -369,6 +384,7 @@ Les options globales se placent **avant** la commande : `media-dedup --locale fr
 | `--ext EXT` | (`audit`, `clean`, `crosscheck`) N'analyse que ces extensions (`--ext png,webp`) ; toutes celles des photos, RAW et vidéos par défaut. [D'autres types](#autres-types-de-fichiers) aussi (`--ext pdf,docx`). |
 | `--yes`, `-y` | (`clean`, `purge`) Ne pas demander de confirmation. |
 | `--tier exact\|near` | (`clean`) `exact` (par défaut) : seulement les copies identiques octet par octet. `near` : déplace aussi les [quasi-doublons](#quasi-doublons-et-rafales) en quarantaine. |
+| `--decisions FICHIER` | (`clean`) Applique les [décisions sur les paires de dossiers téléchargées depuis un rapport](#aller-plus-loin) ; un chemin relatif est lu dans `/reports`. |
 
 `media-dedup --help` et `media-dedup <commande> --help` documentent tout, dans les deux langues.
 
@@ -455,6 +471,14 @@ confirm = true
   quoi elle ressemble.
 - **Lancez avec `-it`** : sans terminal, `clean` ne peut pas demander confirmation (utilisez
   `--yes`) et les couleurs sont désactivées.
+- **Dossiers où l'outil ne peut pas écrire** : quand un dossier donné à `-v` n'existe pas
+  encore, Docker le crée pour `root`, et l'outil (qui ne tourne pas en `root`) ne peut pas y
+  écrire. La commande s'arrête alors avant l'analyse et nomme le dossier. Créez vos dossiers
+  avant `docker run` et, depuis WSL ou Linux, ajoutez `--user "$(id -u):$(id -g)"` ; un dossier
+  déjà créé par Docker redevient le vôtre avec `sudo chown "$(id -u):$(id -g)" <dossier>`. Un
+  `:ro` sur `/journal`, `/quarantine`, `/reports` ou `/cache` l'arrête de la même façon. Seul
+  `config.toml` est facultatif : il n'est alors pas créé. Si seul le rapport échoue après un
+  audit, un avertissement le signale et les résultats restent à l'écran.
 
 ## Peut-on lui faire confiance ?
 

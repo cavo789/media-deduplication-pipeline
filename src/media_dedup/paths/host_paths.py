@@ -47,6 +47,23 @@ class HostPathMapper:
             return f"{parts[0].upper()}:\\" + "\\".join(parts[1:])
         return str(PurePosixPath("/", *parts))
 
+    def roots_on_host(self, roots: tuple[Path, ...]) -> tuple[str, ...]:
+        r"""Name the folders an audit analysed, as the user knows them.
+
+        `/data` mounted as a whole shows its drive folders (`C:\`, `D:\`), not `/`.
+
+        Args:
+            roots: The data roots of the audit.
+
+        Returns:
+            Their host paths.
+        """
+        if roots == (self.data_dir,) and self.data_dir.is_dir():
+            roots = tuple(
+                sorted(child for child in self.data_dir.iterdir() if child.is_dir())
+            )
+        return tuple(self.to_host(root) for root in roots)
+
     def relative(self, path: Path) -> Path:
         """Return `path` relative to the data directory (kept whole when outside it).
 

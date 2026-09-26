@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
+
+import pytest
 
 from media_dedup.paths.locations import Locations
 from media_dedup.paths.mount_kind import MountKind
-from media_dedup.paths.mounts import MountTable, is_read_only, read_mounts
+from media_dedup.paths.mounts import (
+    MountTable,
+    is_read_only,
+    is_writable,
+    read_mounts,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -63,6 +71,21 @@ def test_current_table_and_read_only_flag(tmp_path: Path) -> None:
     """The live mount table is readable and a temp dir is writable."""
     assert isinstance(MountTable.current().mount_points, frozenset)
     assert not is_read_only(tmp_path)
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root writes to any folder")
+def test_is_writable_creates_the_folder_and_leaves_nothing(tmp_path: Path) -> None:
+    """A missing folder is created; the probe file does not stay; 0o555 is refused."""
+    folder = tmp_path / "reports" / "new"
+    assert is_writable(folder)
+    assert folder.is_dir()
+    assert not any(folder.iterdir())
+    folder.chmod(0o555)
+    try:
+        assert not is_writable(folder)
+        assert not is_writable(folder / "below")
+    finally:
+        folder.chmod(0o755)
 
 
 DOCKER_DESKTOP = (

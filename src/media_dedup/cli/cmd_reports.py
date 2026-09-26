@@ -14,6 +14,7 @@ from media_dedup.errors import MountError
 from media_dedup.i18n import _, ngettext
 from media_dedup.paths.mount_kind import MountKind
 from media_dedup.report.index_page import load_summaries, prune_reports, write_index
+from media_dedup.services.writable import ensure_writable
 
 
 def reports_command(
@@ -35,7 +36,7 @@ def reports_command(
         prune: Number of reports to keep, when pruning.
 
     Raises:
-        MountError: The reports folder is not mounted.
+        MountError: The reports folder is not mounted, or not writable.
     """
     runtime = runtime_of(ctx)
     output = runtime.output
@@ -46,6 +47,7 @@ def reports_command(
                 _("No reports mount: there is no report to list."),
                 _('Mount the reports folder: -v "<folder>:/reports".'),
             )
+        ensure_writable(runtime, MountKind.REPORTS)
     if prune is not None:
         removed = prune_reports(reports_dir, prune)
         output.success(

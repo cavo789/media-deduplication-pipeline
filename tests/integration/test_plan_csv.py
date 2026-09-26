@@ -45,7 +45,7 @@ def test_every_file_of_the_plan_is_listed_once(locations: Locations) -> None:
     broken = len(plan.broken) + len(plan.protected_broken)
     assert len(body) == grouped + broken + len(plan.orphans)
     assert [row[4] for row in body if row[7].startswith("Orphan sidecar")] == [
-        "C:\\Family Photos\\2019\\Vacances\\IMG_0001.xmp"
+        "C:\\Users\\Public\\Pictures\\Été 2019\\IMG_0002.xmp"
     ]
     deleted = [row for row in body if row[3] == "delete" and row[0]]
     assert len(deleted) == plan.removable_count

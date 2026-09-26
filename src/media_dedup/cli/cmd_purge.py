@@ -13,6 +13,8 @@ from media_dedup.console.formatting import human_size
 from media_dedup.constants import ExitCode
 from media_dedup.errors import MediaDedupError
 from media_dedup.i18n import _
+from media_dedup.paths.mount_kind import MountKind
+from media_dedup.services.writable import ensure_writable
 
 
 def purge_command(
@@ -34,13 +36,15 @@ def purge_command(
         yes: `--yes`, skip the confirmation.
 
     Raises:
-        MediaDedupError: The requested run has no quarantine.
+        MediaDedupError: The requested run has no quarantine, or the quarantine is
+            not writable.
         typer.Exit: The user declined.
     """
     runtime = runtime_of(ctx)
     output = runtime.output
     quarantine_dir = runtime.locations.quarantine_dir
     with user_errors(output):
+        ensure_writable(runtime, MountKind.QUARANTINE)
         runs = quarantine_runs(quarantine_dir)
         if run_id is not None:
             if run_id not in runs:

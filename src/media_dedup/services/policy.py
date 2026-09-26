@@ -9,16 +9,23 @@ from media_dedup.plan.name_rules import NameRules
 from media_dedup.scan.filters import ScanFilters
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from media_dedup.config.settings import FolderSettings, Settings
     from media_dedup.paths.host_paths import HostPathMapper
 
 
-def keep_policy(settings: Settings, mapper: HostPathMapper) -> KeepPolicy:
+def keep_policy(
+    settings: Settings,
+    mapper: HostPathMapper,
+    with_sidecar: frozenset[Path] = frozenset(),
+) -> KeepPolicy:
     """Build the keep policy from the `[folders]` host paths and the `[keep]` names.
 
     Args:
         settings: The effective settings.
         mapper: Host/container path translator.
+        with_sidecar: Files with a sidecar next to them, from the walk.
 
     Returns:
         The policy, in container paths.
@@ -28,6 +35,7 @@ def keep_policy(settings: Settings, mapper: HostPathMapper) -> KeepPolicy:
         preferred=tuple(mapper.to_container(path) for path in folders.preferred),
         protected=tuple(mapper.to_container(path) for path in folders.protected),
         names=NameRules.from_patterns(keep.generated_names, keep.generic_folders),
+        with_sidecar=with_sidecar,
     )
 
 

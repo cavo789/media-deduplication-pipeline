@@ -6,7 +6,7 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from media_dedup.constants import PAIRS_DIR_NAME, Sizes
+from media_dedup.constants import PAIRS_DIR_NAME, KeepReason, Sizes
 from media_dedup.plan.pairs import folder_pairs
 from media_dedup.report.reasons import keep_reason_label
 from media_dedup.report.thumbnails import PREVIEWABLE, thumbnail_name
@@ -117,6 +117,8 @@ class PairRenderer:
                     if name in self.previews
                 ),
             ),
+            swappable=pair.kept_in != pair.removed_from
+            and all(copy.reason is not KeepReason.PROTECTED for copy in pair.copies),
         )
 
     def page(self, index: int, pair: FolderPair) -> PairPageView:

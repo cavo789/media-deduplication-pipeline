@@ -1,9 +1,10 @@
-"""Inspect the mount table: which paths are Docker mounts, and which are read-only."""
+"""Inspect the mount table: which paths are Docker mounts, read-only, or writable."""
 
 from __future__ import annotations
 
 import os
 import re
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -81,6 +82,28 @@ def is_read_only(path: Path) -> bool:
         True for a `:ro` mount (or any read-only filesystem).
     """
     return bool(os.statvfs(path).f_flag & os.ST_RDONLY)
+
+
+def is_writable(path: Path) -> bool:
+    """Tell whether the container user can create files in `path`.
+
+    Only a real write is reliable (Docker Desktop emulates the permissions of Windows
+    folders): a nameless temporary file is created, then dropped. A missing folder is
+    created first, as the command writing there would do.
+
+    Args:
+        path: A mount point.
+
+    Returns:
+        True when a file could be created in it.
+    """
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryFile(dir=path):
+            pass
+    except OSError:
+        return False
+    return True
 
 
 @dataclass(frozen=True, slots=True)

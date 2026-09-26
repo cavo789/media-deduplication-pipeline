@@ -102,6 +102,8 @@ class _Rows:
                 yield self.row(file, _Line(action, group, digest))
             for file in decision.protected:
                 yield self.row(file, _Line(_("protected, kept"), group, digest))
+            for file in decision.spared:
+                yield self.row(file, _Line(_("kept (your decision)"), group, digest))
 
     def broken(self, plan: CleanPlan) -> Iterator[Row]:
         """One row per broken file, handled or left alone in a protected folder.

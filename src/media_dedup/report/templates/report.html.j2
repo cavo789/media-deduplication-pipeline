@@ -82,7 +82,7 @@
 <h2>📁 {{ _("Folder pairs") }}</h2>
 <p class="muted">{{ _("The quickest check: which folder keeps its copies, which folder loses them. Open a pair to see every copy.") }}</p>
 <table>
-  <tr><th>{{ _("Samples") }}</th><th>{{ _("Kept in") }}</th><th>{{ _("Deleted from") if is_clean else _("Will be deleted from") }}</th><th class="num">{{ _("Files") }}</th><th class="num">{{ _("Size") }}</th></tr>
+  <tr><th>{{ _("Samples") }}</th><th>{{ _("Kept in") }}</th><th>{{ _("Deleted from") if is_clean else _("Will be deleted from") }}</th><th class="num">{{ _("Files") }}</th><th class="num">{{ _("Size") }}</th>{% if not is_clean %}<th>{{ _("Your decision") }}</th>{% endif %}</tr>
   {% for pair in report.pairs %}
   <tr>
     <td><div class="samples">{% for sample in pair.evidence.samples %}<img src="{{ sample }}" alt="" loading="lazy">{% endfor %}</div></td>
@@ -90,9 +90,17 @@
     <td class="remove">{{ pair.removed_from }}{% if pair.evidence.complete %}<br><span class="badge">{{ _("entirely a copy: holds nothing else") }}</span>{% endif %}</td>
     <td class="num"><a href="{{ pair.page }}">{{ pair.files | number }}</a></td>
     <td class="num">{{ pair.size | size }}</td>
+    {% if not is_clean %}
+    <td><select class="decision" data-kept-in="{{ pair.kept_in }}" data-removed-from="{{ pair.removed_from }}" aria-label="{{ _('Your decision') }}">
+      <option value="">{{ _("As planned") }}</option>
+      {% if pair.swappable %}<option value="swap">{{ _("Swap the folders") }}</option>{% endif %}
+      <option value="skip">{{ _("Leave alone") }}</option>
+    </select></td>
+    {% endif %}
   </tr>
   {% endfor %}
 </table>
+{% if not is_clean %}{% include "_decisions.html.j2" %}{% endif %}
 {% endif %}
 
 {% if report.groups.sample %}

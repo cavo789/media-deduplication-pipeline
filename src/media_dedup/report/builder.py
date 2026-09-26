@@ -110,7 +110,7 @@ class ReportBuilder:
         groups = GroupRenderer(self.mapper, names)
         return ReportView(
             header=ReportHeader(
-                self.summary(record), self._roots(record.findings.roots)
+                self.summary(record), self.mapper.roots_on_host(record.findings.roots)
             ),
             pairs=tuple(
                 self._renderer(record, previews).summary(index, pair)
@@ -171,15 +171,6 @@ class ReportBuilder:
 
     def _names(self, previews: set[Path]) -> frozenset[str]:
         return frozenset(str(path.relative_to(self.folder)) for path in previews)
-
-    def _roots(self, roots: tuple[Path, ...]) -> tuple[str, ...]:
-        # /data mounted as a whole: show its drive folders (C:\, D:\) rather than "/".
-        data_dir = self.mapper.data_dir
-        if roots == (data_dir,) and data_dir.is_dir():
-            roots = tuple(
-                sorted(child for child in data_dir.iterdir() if child.is_dir())
-            )
-        return tuple(self.mapper.to_host(root) for root in roots)
 
     def _broken(self, item: BrokenFile, names: frozenset[str]) -> BrokenView:
         name = thumbnail_name(item.file)

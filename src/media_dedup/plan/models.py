@@ -21,7 +21,11 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class KeepDecision:
-    """One duplicate group: the copy that stays and the copies that go."""
+    """One duplicate group: the copy that stays and the copies that go.
+
+    `protected` copies lie in protected folders; `spared` ones were kept by a review
+    decision (`clean --decisions`). Neither is ever removed.
+    """
 
     digest: str
     size: int
@@ -29,6 +33,7 @@ class KeepDecision:
     removable: tuple[MediaFile, ...]
     protected: tuple[MediaFile, ...] = ()
     reason: KeepReason | None = None
+    spared: tuple[MediaFile, ...] = ()
 
     @property
     def reclaimable(self) -> int:

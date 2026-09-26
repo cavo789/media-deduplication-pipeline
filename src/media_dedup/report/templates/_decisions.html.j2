@@ -1,0 +1,67 @@
+{# Decisions on folder pairs: kept in this browser, downloaded as decisions.json for
+   `clean --decisions`. The page never deletes anything: the CLI does, with every safeguard. #}
+<div class="note">
+  <strong>✋ {{ _("Not the folder you want to keep?") }}</strong>
+  {{ _("Decide per pair: “Swap the folders” keeps the copies of the second folder and deletes those of the first one; “Leave alone” deletes nothing of that pair. This browser remembers your choices.") }}
+  <p><button id="download-decisions" type="button" disabled>{{ _("Download decisions.json") }} (<span id="decisions-count">0</span>)</button></p>
+  <span class="muted">{{ _("Save it in the folder mounted on /reports, then run the same 'clean' command with --decisions decisions.json: it audits again, applies your decisions, shows the result and asks before cleaning. The file is refused if the folders or the pairs changed in the meantime.") }}</span>
+</div>
+<script>
+(() => {
+  const report = {{ s.folder | tojson }};
+  const roots = {{ report.header.roots | tojson }};
+  const storageKey = "media-dedup:decisions:" + report;
+  const selects = Array.from(document.querySelectorAll("select.decision"));
+  const button = document.getElementById("download-decisions");
+  const count = document.getElementById("decisions-count");
+  const pairKey = (select) => select.dataset.keptIn + "\n" + select.dataset.removedFrom;
+  const decided = () => selects.filter((select) => select.value !== "");
+  let saved = {};
+  try {
+    saved = JSON.parse(window.localStorage.getItem(storageKey) || "{}");
+  } catch (error) {
+    saved = {};
+  }
+  for (const select of selects) {
+    const value = saved[pairKey(select)];
+    if (Array.from(select.options).some((option) => option.value === value)) {
+      select.value = value;
+    }
+  }
+  const refresh = () => {
+    const chosen = decided();
+    count.textContent = String(chosen.length);
+    button.disabled = chosen.length === 0;
+    const state = Object.fromEntries(chosen.map((select) => [pairKey(select), select.value]));
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(state));
+    } catch (error) {
+      // Storage refused (private browsing): the choices only last while the page is open.
+    }
+  };
+  for (const select of selects) {
+    select.addEventListener("change", refresh);
+  }
+  button.addEventListener("click", () => {
+    const file = {
+      version: 1,
+      report: report,
+      roots: roots,
+      pairs: decided().map((select) => ({
+        kept_in: select.dataset.keptIn,
+        removed_from: select.dataset.removedFrom,
+        action: select.value,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(file, null, 2) + "\n"], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "decisions.json";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  });
+  refresh();
+})();
+</script>

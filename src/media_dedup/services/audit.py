@@ -24,6 +24,7 @@ from media_dedup.scan.broken import BrokenFileFinder, IntegrityFindings
 from media_dedup.scan.deps import IntegrityTools, ScanDeps
 from media_dedup.scan.exact import ExactDuplicateFinder
 from media_dedup.scan.progress import Step
+from media_dedup.scan.sidecars import accompanied
 from media_dedup.scan.walker import Walk, walk
 from media_dedup.services.data_checks import (
     refuse_overlapping_mounts,
@@ -90,15 +91,22 @@ class AuditService:
                     ExactDuplicateFinder(deps),
                 ),
             )
-        policy = keep_policy(runtime.settings, runtime.mapper)
+        policy = keep_policy(
+            runtime.settings, runtime.mapper, accompanied(found.sidecars)
+        )
         plan = build_plan(groups, integrity.broken, policy)
-        folder_files = Counter(file.path.parent for file in found.files)
+        # With --ext, sidecars already alone before the clean are left where they are.
+        sidecars = sidecars_in_scope(
+            found.sidecars, policy, alone=not runtime.settings.scan.extensions
+        )
         return AuditFindings(
             files_scanned=len(found.files),
             roots=roots,
-            plan=replace(plan, sidecars=found.sidecars),
+            plan=replace(plan, sidecars=sidecars),
             seconds=time.monotonic() - started,
-            folder_files=MappingProxyType(folder_files),
+            folder_files=MappingProxyType(
+                Counter(file.path.parent for file in found.files)
+            ),
             groups=groups,
             similar=find_similar(
                 SimilarInputs(found.files, integrity.visuals, groups), policy
@@ -123,8 +131,7 @@ class AuditService:
             roots: Mounted folders.
 
         Returns:
-            The media files, by path, and the sidecars `clean` may move (outside
-            protected folders; without an extension filter, the lone ones too).
+            The media files, by path, and every sidecar found.
         """
         filters = scan_filters(self._runtime.settings, self._runtime.mapper)
         step = Step(
@@ -139,12 +146,7 @@ class AuditService:
         self._progress.stop()
         unique = unique_files(found.files)
         warn_about_aliases(self._runtime, unique.aliases)
-        runtime = self._runtime
-        policy = keep_policy(runtime.settings, runtime.mapper)
-        alone = not runtime.settings.scan.extensions
-        return Walk(
-            unique.files, sidecars_in_scope(found.sidecars, policy, alone=alone)
-        )
+        return Walk(unique.files, found.sidecars)
 
 
 async def _analyse(

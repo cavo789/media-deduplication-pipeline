@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated
 
 import typer
@@ -13,6 +14,7 @@ from media_dedup.cli.flows import (
     audit_and_show,
     confirm_clean,
     report_and_announce,
+    show_pairs,
     show_second_opinion,
 )
 from media_dedup.console.progress import RichProgress
@@ -21,6 +23,7 @@ from media_dedup.constants import CleanTier, ExitCode, RunKind
 from media_dedup.i18n import _
 from media_dedup.report.views import ReportRecord
 from media_dedup.services.clean import CleanService
+from media_dedup.services.review import apply_review, load_review, review_choices
 
 if TYPE_CHECKING:
     from media_dedup.actions.outcome import Outcome
@@ -37,6 +40,7 @@ def clean_command(  # pylint: disable=too-many-arguments,too-many-locals
     ext: Annotated[list[str] | None, options.extensions()] = None,
     yes: Annotated[bool, options.yes()] = False,
     tier: Annotated[CleanTier, clean_options.tier()] = CleanTier.EXACT,
+    decisions: Annotated[Path | None, clean_options.decisions()] = None,
 ) -> None:
     """Audit, confirm, then delete duplicate copies and handle broken files.
 
@@ -48,6 +52,7 @@ def clean_command(  # pylint: disable=too-many-arguments,too-many-locals
         ext: `--ext` extensions.
         yes: `--yes`, skip the confirmation.
         tier: `--tier`, near duplicates are moved to the quarantine too.
+        decisions: `--decisions`, the review downloaded from a report.
 
     Raises:
         typer.Exit: The user declined.
@@ -60,10 +65,15 @@ def clean_command(  # pylint: disable=too-many-arguments,too-many-locals
         ).with_overrides(scan_layer(ext))
         service = CleanService(runtime, progress)
         service.ensure_ready(near=tier is CleanTier.NEAR)
+        review = load_review(runtime, decisions) if decisions else None
         findings = audit_and_show(runtime)
         plan = service.feasible(findings.plan)
         if tier is CleanTier.NEAR:
             plan = service.with_near(plan, findings)
+        if review is not None:
+            choices = review_choices(runtime, findings, review)
+            plan = apply_review(runtime, plan, choices)
+            show_pairs(runtime, replace(findings, plan=plan))
         verdict = None if plan.is_empty else show_second_opinion(runtime, findings)
         if plan.is_empty:
             output.success(_("Nothing to clean: no duplicate and no broken file."))

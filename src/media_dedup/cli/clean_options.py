@@ -30,3 +30,23 @@ def tier() -> OptionInfo:
             case_sensitive=False,
         ),
     )
+
+
+def decisions() -> OptionInfo:
+    """`--decisions`: apply the folder-pair decisions downloaded from a report.
+
+    Returns:
+        The option definition.
+    """
+    return cast(
+        "OptionInfo",
+        typer.Option(
+            "--decisions",
+            help=_(
+                "decisions.json downloaded from an audit report (swap or leave alone "
+                "some folder pairs). A relative path is read from the folder mounted "
+                "on /reports. The file is refused if the folders or the pairs changed."
+            ),
+            show_default=False,
+        ),
+    )

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from media_dedup.constants import MediaKind
+from media_dedup.constants import KeepReason, MediaKind
 from media_dedup.plan.keeper import KeepPolicy
 from media_dedup.scan.models import DuplicateGroup, MediaFile
 
@@ -44,6 +44,17 @@ def test_preferred_match_ignores_case() -> None:
         policy, file_at("c/other/IMG.jpg"), file_at("c/family photos/IMG.jpg", 5)
     )
     assert kept == DATA / "c/family photos/IMG.jpg"
+
+
+def test_a_sidecar_keeps_its_photo() -> None:
+    """The copy with a sidecar (its edits) wins, unless another folder is preferred."""
+    edited, plain = file_at("c/long/path/IMG (1).jpg", 9), file_at("d/IMG.jpg")
+    policy = KeepPolicy(with_sidecar=frozenset({edited.path}))
+    decision = policy.decide(DuplicateGroup("digest", 10, (plain, edited)))
+    assert decision.keeper == edited
+    assert decision.reason is KeepReason.HAS_SIDECAR
+    preferred = KeepPolicy(preferred=(DATA / "d",), with_sidecar=policy.with_sidecar)
+    assert keeper_of(preferred, plain, edited) == plain.path
 
 
 def test_original_name_beats_copy_name() -> None:

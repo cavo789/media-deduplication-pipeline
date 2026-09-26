@@ -69,3 +69,19 @@ def companions_of(sidecar: Path, names: Iterable[str]) -> frozenset[str]:
         if not is_sidecar(name)
         and key in {name.casefold(), PurePath(name).stem.casefold()}
     )
+
+
+def accompanied(sidecars: Iterable[Sidecar]) -> frozenset[Path]:
+    """Return the files that have a sidecar next to them.
+
+    Args:
+        sidecars: The sidecars the walk listed.
+
+    Returns:
+        The paths of the files they belong to.
+    """
+    return frozenset(
+        sidecar.file.path.parent / name
+        for sidecar in sidecars
+        for name in sidecar.companions
+    )

@@ -14,7 +14,12 @@ from media_dedup.plan.orphans import sidecars_in_scope
 from media_dedup.scan.filters import ScanFilters
 from media_dedup.scan.models import MediaFile
 from media_dedup.scan.progress import NullProgress
-from media_dedup.scan.sidecars import Sidecar, companions_of, is_sidecar
+from media_dedup.scan.sidecars import (
+    Sidecar,
+    accompanied,
+    companions_of,
+    is_sidecar,
+)
 from media_dedup.scan.walker import walk
 
 DATA = Path("/data")
@@ -113,3 +118,12 @@ def test_walk_lists_sidecars_with_their_files(tmp_path: Path) -> None:
     assert by_name["IMG_1.xmp"].companions == {"IMG_1.jpg", "IMG_1.CR2"}
     assert by_name["IMG_1.xmp"].file.kind is MediaKind.SIDECAR
     assert by_name["lone.thm"].companions == frozenset()
+
+
+def test_accompanied_files_are_those_of_the_sidecars() -> None:
+    """Every file a sidecar belongs to has one; a lone sidecar adds nothing."""
+    sidecars = (
+        sidecar_at("c/a/IMG_1.xmp", "IMG_1.jpg", "IMG_1.CR2"),
+        sidecar_at("c/b/MVI_7.THM"),
+    )
+    assert accompanied(sidecars) == {DATA / "c/a/IMG_1.jpg", DATA / "c/a/IMG_1.CR2"}

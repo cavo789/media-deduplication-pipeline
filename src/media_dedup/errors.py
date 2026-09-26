@@ -32,3 +32,7 @@ class JournalError(MediaDedupError):
 
 class CrossCheckError(MediaDedupError):
     """Czkawka results are missing, unreadable, or cover other folders."""
+
+
+class DecisionsError(MediaDedupError):
+    """A decisions file is missing, invalid, or made for another audit."""

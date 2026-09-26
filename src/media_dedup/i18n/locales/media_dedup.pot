@@ -73,6 +73,9 @@ msgstr ""
 msgid "Analyse"
 msgstr ""
 
+msgid "As planned"
+msgstr ""
+
 msgid "Ask for confirmation before cleaning."
 msgstr ""
 
@@ -120,6 +123,10 @@ msgid "Burst series (listed, never cleaned)"
 msgstr ""
 
 msgid "Cannot ask for confirmation without an interactive terminal."
+msgstr ""
+
+#, python-brace-format
+msgid "Cannot read the decisions file {path}."
 msgstr ""
 
 #, python-brace-format
@@ -177,6 +184,15 @@ msgstr ""
 msgid "Copies of other files than media go to /quarantine: mount it."
 msgstr ""
 
+msgid ""
+"Create the folder yourself before docker run (Docker creates a missing "
+"one for root only); from WSL or Linux, add --user \"$(id -u):$(id -g)\"."
+msgid_plural ""
+"Create the folders yourself before docker run (Docker creates missing "
+"ones for root only); from WSL or Linux, add --user \"$(id -u):$(id -g)\"."
+msgstr[0] ""
+msgstr[1] ""
+
 #, python-brace-format
 msgid "Czkawka agrees: the same {copies} extra copies in {groups} groups."
 msgstr ""
@@ -202,6 +218,12 @@ msgid "Czkawka's results cover other folders than this run."
 msgstr ""
 
 msgid "Date"
+msgstr ""
+
+msgid ""
+"Decide per pair: “Swap the folders” keeps the copies of the second folder"
+" and deletes those of the first one; “Leave alone” deletes nothing of "
+"that pair. This browser remembers your choices."
 msgstr ""
 
 msgid "Delete all reports but the N most recent ones."
@@ -231,6 +253,12 @@ msgstr ""
 
 #, python-brace-format
 msgid "Double-click {name} in the folder mounted on /reports."
+msgstr ""
+
+msgid "Download decisions.json"
+msgstr ""
+
+msgid "Download it again from the report, next to it on /reports."
 msgstr ""
 
 msgid "Duplicate groups"
@@ -286,6 +314,9 @@ msgid "File"
 msgstr ""
 
 msgid "Files"
+msgstr ""
+
+msgid "Files changed since the report: audit again and decide on it."
 msgstr ""
 
 msgid "Files left untouched"
@@ -402,6 +433,9 @@ msgstr ""
 msgid "Kept in"
 msgstr ""
 
+msgid "Leave alone"
+msgstr ""
+
 #, python-brace-format
 msgid "Line {number} of {path} is corrupt."
 msgstr ""
@@ -433,6 +467,9 @@ msgid ""
 msgstr ""
 
 msgid "Mount points"
+msgstr ""
+
+msgid "Mount the folders of that report, or decide again on a new report."
 msgstr ""
 
 msgid "Mount the journal folder used by clean: -v \"<folder>:/journal\"."
@@ -483,6 +520,10 @@ msgid "No clean run yet."
 msgstr ""
 
 #, python-brace-format
+msgid "No config.toml created: the container cannot write to {folder}."
+msgstr ""
+
+#, python-brace-format
 msgid "No folder to analyse under {path}."
 msgstr ""
 
@@ -517,6 +558,9 @@ msgstr ""
 msgid ""
 "Not photos or videos: {extensions}. These files are only compared byte "
 "for byte, and their copies are moved to the quarantine."
+msgstr ""
+
+msgid "Not the folder you want to keep?"
 msgstr ""
 
 msgid "Nothing to clean: no duplicate and no broken file."
@@ -622,6 +666,11 @@ msgid ""
 "disables the rule."
 msgstr ""
 
+msgid "Remove ':ro' from its -v option: the tool writes there."
+msgid_plural "Remove ':ro' from their -v options: the tool writes there."
+msgstr[0] ""
+msgstr[1] ""
+
 msgid "Remove ':ro' from their -v options to let 'clean' act."
 msgstr ""
 
@@ -690,6 +739,13 @@ msgstr ""
 msgid "Samples"
 msgstr ""
 
+msgid ""
+"Save it in the folder mounted on /reports, then run the same 'clean' "
+"command with --decisions decisions.json: it audits again, applies your "
+"decisions, shows the result and asks before cleaning. The file is refused"
+" if the folders or the pairs changed in the meantime."
+msgstr ""
+
 msgid "Scan (override scan.* of config.toml)"
 msgstr ""
 
@@ -750,11 +806,22 @@ msgstr ""
 msgid "State"
 msgstr ""
 
+msgid "Swap the folders"
+msgstr ""
+
 msgid "TB"
 msgstr ""
 
 #, python-brace-format
+msgid "The HTML report could not be written to {folder}: {reason}."
+msgstr ""
+
+#, python-brace-format
 msgid "The configuration file {path} is not valid TOML: {error}"
+msgstr ""
+
+#, python-brace-format
+msgid "The container cannot write to {folders}."
 msgstr ""
 
 msgid "The current folder (PowerShell, or bash on WSL, Linux, macOS):"
@@ -783,6 +850,12 @@ msgid ""
 msgstr ""
 
 msgid "The whole plan as a spreadsheet (CSV): every group, every file"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"These decisions were made on other folders ({theirs}); this run analyses "
+"{ours}."
 msgstr ""
 
 #, python-brace-format
@@ -827,6 +900,13 @@ msgid "Will be deleted from"
 msgstr ""
 
 msgid "Windows paths must use 'single quotes' in TOML, e.g. 'C:\\Photos'."
+msgstr ""
+
+msgid "Your decision"
+msgstr ""
+
+#, python-brace-format
+msgid "Your decisions — pairs swapped: {swapped}, pairs left alone: {skipped}."
 msgstr ""
 
 msgid "[cyan]read-only[/]"
@@ -881,6 +961,12 @@ msgstr ""
 msgid "config.toml"
 msgstr ""
 
+msgid ""
+"decisions.json downloaded from an audit report (swap or leave alone some "
+"folder pairs). A relative path is read from the folder mounted on "
+"/reports. The file is refused if the folders or the pairs changed."
+msgstr ""
+
 msgid "default"
 msgstr ""
 
@@ -926,10 +1012,16 @@ msgstr ""
 msgid "its copy {path} is gone"
 msgstr ""
 
+msgid "its sidecar (.xmp, .aae, .thm) holding its edits (the other one has none)"
+msgstr ""
+
 msgid "keep"
 msgstr ""
 
 msgid "kept"
+msgstr ""
+
+msgid "kept (your decision)"
 msgstr ""
 
 msgid "media files scanned"
@@ -1020,6 +1112,9 @@ msgstr ""
 msgid "yes"
 msgstr ""
 
+msgid "your decision in the report"
+msgstr ""
+
 #, python-brace-format
 msgid ""
 "{count} copy of another file than a media will be moved to the "
@@ -1027,6 +1122,12 @@ msgid ""
 msgid_plural ""
 "{count} copies of other files than media will be moved to the quarantine,"
 " not deleted."
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid "{count} decided folder pair no longer exists, e.g. {kept} -> {removed}."
+msgid_plural "{count} decided folder pairs no longer exist, e.g. {kept} -> {removed}."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -1079,11 +1180,23 @@ msgid "{folder} (seen as {first} and as {second})"
 msgstr ""
 
 #, python-brace-format
+msgid "{folder} is protected: its copies are always kept."
+msgstr ""
+
+#, python-brace-format
+msgid "{folder}: copies inside one folder cannot be swapped."
+msgstr ""
+
+#, python-brace-format
 msgid "{name} must be a JSON array, e.g. [\"C:\\\\Photos\"]"
 msgstr ""
 
 #, python-brace-format
 msgid "{path} is not a Czkawka result file."
+msgstr ""
+
+#, python-brace-format
+msgid "{path} is not a valid decisions file ({error})."
 msgstr ""
 
 #, python-brace-format

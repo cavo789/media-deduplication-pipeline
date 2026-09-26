@@ -2,10 +2,11 @@
 
 Layout, with the /data/<drive letter>/<path> convention of the image:
 exact copies across "C:" and "D:", Windows-style "(1)" copies, an empty file,
-a truncated JPEG, HEIC and MP4 duplicates, a broken video, sidecars (one next to its
-photo, one left orphan by the clean), a burst of similar-but-different photos that
-must never be touched (one of them blurred), and one photo saved again smaller
-(WhatsApp) and recompressed without its date.
+a truncated JPEG, HEIC and MP4 duplicates, a broken video, sidecars (each one keeps
+its photo, except where two copies have their own: one is left orphan by the clean),
+a burst of similar-but-different photos that must never be touched (one of them
+blurred), and one photo saved again smaller (WhatsApp) and recompressed without its
+date.
 """
 
 from __future__ import annotations
@@ -48,6 +49,7 @@ def build_demo(data_dir: Path) -> None:
     media.truncated(first, f"{_BACKUP}/2020/IMG_0001_interrupted.jpg")
     (data_dir / _PHOTOS / "2019/Vacances/IMG_0001.xmp").write_text("<x:xmpmeta/>")
     (data_dir / _BACKUP / "2019/IMG_0002.AAE").write_text("<plist/>")
+    (data_dir / _PICTURES / "Été 2019/IMG_0002.xmp").write_text("<x:xmpmeta/>")
     for shot in range(_BURST_SIZE):
         write_shot(
             data_dir / f"{_PHOTOS}/Rafale/IMG_20{shot}.jpg",

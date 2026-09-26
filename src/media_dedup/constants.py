@@ -60,16 +60,18 @@ class MediaKind(StrEnum):
 
 
 class KeepReason(StrEnum):
-    """What made the kept copy win, in the order the keep policy compares copies."""
+    """What made the kept copy win: the policy's criteria in order, then a review."""
 
     PROTECTED = "protected"
     PREFERRED = "preferred"
+    HAS_SIDECAR = "has-sidecar"
     NOT_A_COPY = "not-a-copy"
     MEANINGFUL_NAME = "meaningful-name"
     MEANINGFUL_FOLDER = "meaningful-folder"
     OLDEST = "oldest"
     SHORTEST_PATH = "shortest-path"
     ALPHABETICAL = "alphabetical"
+    REVIEWED = "reviewed"
 
 
 class BrokenReason(StrEnum):
@@ -155,7 +157,7 @@ VIDEO_EXTENSIONS: Final = frozenset(
     | {".mpeg", ".mpg", ".mts", ".ts", ".webm", ".wmv"},
 )
 MEDIA_EXTENSIONS: Final = IMAGE_EXTENSIONS | RAW_EXTENSIONS | VIDEO_EXTENSIONS
-# Sidecars hold metadata or edits of the photo of the same name: moved once orphan.
+# Sidecars hold the metadata or edits of their photo: it is kept; moved once orphan.
 SIDECAR_EXTENSIONS: Final = frozenset({".aae", ".thm", ".xmp"})
 # System folders that never hold user media (Windows, Synology, desktop trash bins).
 EXCLUDED_DIR_NAMES: Final = frozenset(
@@ -166,8 +168,7 @@ APP_DIR_NAMES: Final = frozenset(
     {".git", ".hg", ".svn", ".venv", "venv", "node_modules", "site-packages", "windows"}
     | {"__pycache__", "appdata", "programdata", "program files", "program files (x86)"},
 )
-# File names (without extension and copy marks) that cameras and apps generate: they say
-# nothing, so a copy with a name typed by someone is kept instead. Whole name, any case.
+# Names cameras and apps generate, matched whole (no extension/copy mark, any case).
 GENERATED_NAMES: Final = (
     r"_?(IMG|VID|MVI|MOV|SAM|DSC[NF]?|_DSC|PICT|CIMG)[_-]?\d+",
     r"(IMG|VID)[_-]\d{8}[_-]\d{6}([_-]\d+)?",

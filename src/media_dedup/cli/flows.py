@@ -9,11 +9,13 @@ from media_dedup.console.crosscheck_view import show_cross_check
 from media_dedup.console.formatting import human_number, human_size
 from media_dedup.console.progress import RichProgress
 from media_dedup.console.tables import findings_table, folder_pairs_view
-from media_dedup.errors import CrossCheckError, MediaDedupError
+from media_dedup.errors import CrossCheckError, MediaDedupError, MountError
 from media_dedup.i18n import _, ngettext
+from media_dedup.paths.mount_kind import MountKind
 from media_dedup.services.audit import AuditService
 from media_dedup.services.crosscheck import cross_check
 from media_dedup.services.reporting import write_report
+from media_dedup.services.writable import ensure_writable
 
 if TYPE_CHECKING:
     from media_dedup.crosscheck.compare import CrossCheckResult
@@ -30,18 +32,32 @@ def audit_and_show(runtime: Runtime) -> AuditFindings:
 
     Returns:
         The findings.
+
+    Raises:
+        MountError: The index or the report could not be written (checked first).
     """
+    ensure_writable(runtime, MountKind.CACHE, MountKind.REPORTS)
     output = runtime.output
     output.title(_("Audit"))
     with RichProgress(output.console) as progress:
         findings = AuditService(runtime, progress).run()
     output.show(findings_table(findings))
     output.blank()
+    show_pairs(runtime, findings)
+    return findings
+
+
+def show_pairs(runtime: Runtime, findings: AuditFindings) -> None:
+    """Print the folder pairs freeing the most space, when there are any.
+
+    Args:
+        runtime: Settings, mount points and output.
+        findings: The audit, or the plan once reviewed.
+    """
     pairs = folder_pairs_view(findings, runtime.mapper)
     if pairs is not None:
-        output.show(pairs)
-        output.blank()
-    return findings
+        runtime.output.show(pairs)
+        runtime.output.blank()
 
 
 def show_second_opinion(
@@ -76,12 +92,20 @@ def show_second_opinion(
 def report_and_announce(runtime: Runtime, record: ReportRecord) -> None:
     """Write the HTML report and tell the user where it is.
 
+    A report that cannot be written is only a warning: the results are on screen.
+
     Args:
         runtime: Settings, mount points and output.
         record: What to report.
     """
     output = runtime.output
-    report = write_report(runtime, record)
+    try:
+        report = write_report(runtime, record)
+    except MountError as exc:
+        output.warning(exc.message)
+        if exc.tip:
+            output.tip(exc.tip)
+        return
     if report is None:
         output.tip(_('Add -v "<a folder of yours>:/reports" to get HTML reports.'))
         return

@@ -41,7 +41,11 @@ def test_demo_tree_findings(locations: Locations) -> None:
     )
     expected_groups = 5 if FFMPEG else 4
     assert len(plan.decisions) == expected_groups
-    assert "d/backup/2019/IMG_0001.jpg" in keepers  # shortest path wins the final tie
+    # Its sidecar (its edits) keeps a photo; otherwise, the shortest path wins the tie.
+    assert "c/Family Photos/2019/Vacances/IMG_0001.jpg" in keepers
+    assert "d/backup/2019/IMG_0003.jpg" in keepers
+    # Two copies of IMG_0002 have their own sidecar: only one of them can stay.
+    assert [file.path.name for file in plan.orphans] == ["IMG_0002.xmp"]
     removable = [f.path for d in plan.decisions for f in d.removable]
     assert "IMG_0001 (1).jpg" in names(removable)
     assert not any("Rafale" in str(path) for path in removable)

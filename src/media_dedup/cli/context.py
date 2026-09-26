@@ -17,6 +17,7 @@ from media_dedup.paths.locations import Locations
 from media_dedup.paths.mount_kind import MountKind
 from media_dedup.paths.mounts import MountTable
 from media_dedup.services.runtime import Runtime
+from media_dedup.services.writable import writable_tip
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -62,15 +63,38 @@ def build_runtime(cli_layer: Layer) -> Runtime:
     output = Output(make_console(general.color))
     configure_logging(general.verbosity, output.console)
     runtime = Runtime(loaded, locations, MountTable.current(), output, cli_layer)
-    if runtime.persistent(MountKind.CONFIG) and write_default_config(
-        locations.config_file, general.locale
-    ):
+    if runtime.persistent(MountKind.CONFIG):
+        _create_default_config(runtime)
+    return runtime
+
+
+def _create_default_config(runtime: Runtime) -> None:
+    """Create the commented `config.toml` on the first run, or say why it cannot.
+
+    The settings are loaded already: the command runs on without the file.
+
+    Args:
+        runtime: The runtime of this invocation.
+    """
+    locations, output = runtime.locations, runtime.output
+    try:
+        created = write_default_config(
+            locations.config_file, runtime.settings.general.locale
+        )
+    except OSError:
+        output.warning(
+            _("No config.toml created: the container cannot write to {folder}.").format(
+                folder=runtime.mapper.to_host(locations.config_dir),
+            ),
+        )
+        output.tip(writable_tip((locations.config_dir,)))
+        return
+    if created:
         output.tip(
             _("A commented configuration file was created: {path}.").format(
                 path=runtime.mapper.to_host(locations.config_file),
             ),
         )
-    return runtime
 
 
 def runtime_of(ctx: typer.Context) -> Runtime:

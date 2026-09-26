@@ -14,6 +14,7 @@ from media_dedup.errors import MountError
 from media_dedup.i18n import _
 from media_dedup.paths.mount_kind import MountKind
 from media_dedup.paths.mounts import is_read_only
+from media_dedup.services.writable import ensure_writable
 
 if TYPE_CHECKING:
     from media_dedup.actions.outcome import Outcome
@@ -42,8 +43,9 @@ class CleanService:
             near: Near duplicates will be moved to the quarantine (`--tier near`).
 
         Raises:
-            MountError: The journal is not persistent, a folder is read-only, or near
-                duplicates or copies of other files have no quarantine to go to.
+            MountError: The journal is not persistent, a folder is read-only, the
+                journal or the quarantine is not writable, or near duplicates or copies
+                of other files have no quarantine to go to.
         """
         runtime = self._runtime
         quarantine = runtime.persistent(MountKind.QUARANTINE)
@@ -75,6 +77,7 @@ class CleanService:
                 ),
                 _("Remove ':ro' from their -v options to let 'clean' act."),
             )
+        ensure_writable(runtime, MountKind.JOURNAL, MountKind.QUARANTINE)
 
     def feasible(self, plan: CleanPlan) -> CleanPlan:
         """Drop what has to be moved when there is no quarantine to move it to.
