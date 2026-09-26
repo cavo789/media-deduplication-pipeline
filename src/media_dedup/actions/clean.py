@@ -1,4 +1,4 @@
-"""Execute a plan: delete exact copies, quarantine near ones, broken files, orphans."""
+"""Execute a plan: delete exact copies and empty files, quarantine the rest."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from media_dedup.actions.journaled import JournaledChanges
 from media_dedup.actions.outcome import Incident, Outcome, Tally
 from media_dedup.actions.verify import (
+    burst_blocker,
     change_blocker,
     near_blocker,
     orphan_blocker,
@@ -19,14 +20,15 @@ from media_dedup.i18n import _
 from media_dedup.scan.progress import Step
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
 
     from media_dedup.actions.journaled import CleanContext
     from media_dedup.plan.models import CleanPlan, KeepDecision
-    from media_dedup.plan.similar_models import NearDecision
+    from media_dedup.plan.similar_models import BurstChoice, NearDecision
     from media_dedup.scan.models import BrokenFile, MediaFile
 
 _LOGGER = logging.getLogger(__name__)
+type _Action = Callable[[], object]
 
 
 class CleanExecutor:
@@ -58,23 +60,50 @@ class CleanExecutor:
                 "unreadable files go to the quarantine."
             ),
         )
-        total = plan.removable_count + plan.near_count + len(plan.broken)
+        total = plan.removable_count + plan.near_count + plan.burst_count
+        total += len(plan.broken)
         self._context.progress.start(step, total + len(plan.orphans))
-        for decision in plan.decisions:
-            for file in decision.removable:
-                self._guarded(file, partial(self._delete_copy, decision, file))
-        for near in plan.near:
-            for file in near.removable:
-                self._guarded(file, partial(self._quarantine_near, near, file))
-        for item in plan.broken:
-            self._guarded(item.file, partial(self._handle_broken, item))
-        # Last: a sidecar is an orphan only once the files it belongs to are gone.
-        for file in plan.orphans:
-            self._guarded(file, partial(self._quarantine_orphan, file))
+        for file, action in self._actions(plan):
+            self._guarded(file, action)
         self._context.progress.stop()
         return self._tally.freeze()
 
-    def _guarded(self, file: MediaFile, action: Callable[[], object]) -> None:
+    def _actions(self, plan: CleanPlan) -> Iterator[tuple[MediaFile, _Action]]:
+        """List the actions of the plan, in the order they must happen.
+
+        Args:
+            plan: What to clean.
+
+        Yields:
+            Each file, and the action on it.
+        """
+        for decision in plan.decisions:
+            for file in decision.removable:
+                yield file, partial(self._delete_copy, decision, file)
+        yield from self._look_alikes(plan)
+        for item in plan.broken:
+            yield item.file, partial(self._handle_broken, item)
+        # Last: a sidecar is an orphan only once the files it belongs to are gone.
+        for file in plan.orphans:
+            yield file, partial(self._quarantine_orphan, file)
+
+    def _look_alikes(self, plan: CleanPlan) -> Iterator[tuple[MediaFile, _Action]]:
+        """List the moves of pictures that look like a kept one: near, burst shots.
+
+        Args:
+            plan: What to clean.
+
+        Yields:
+            Each file, and its move to the quarantine.
+        """
+        for near in plan.near:
+            for file in near.removable:
+                yield file, partial(self._quarantine_near, near, file)
+        for choice in plan.bursts:
+            for file in choice.discarded:
+                yield file, partial(self._quarantine_burst, choice, file)
+
+    def _guarded(self, file: MediaFile, action: _Action) -> None:
         """Run one action, turning an OS error into a recorded failure.
 
         Args:
@@ -124,6 +153,20 @@ class CleanExecutor:
             self._tally.skipped.append(Incident(file.path, blocker))
             return
         self._changes.quarantine(file, ActionKind.QUARANTINE_NEAR, decision.keeper.path)
+
+    def _quarantine_burst(self, choice: BurstChoice, file: MediaFile) -> None:
+        """Move one burst shot a review set aside to the quarantine.
+
+        Args:
+            choice: The review of its series, holding the shots kept.
+            file: Shot to move.
+        """
+        blocker = burst_blocker(choice.kept, file)
+        if blocker is not None:
+            self._tally.skipped.append(Incident(file.path, blocker))
+            return
+        keeper = choice.kept[0].path
+        self._changes.quarantine(file, ActionKind.QUARANTINE_BURST, keeper)
 
     def _handle_broken(self, item: BrokenFile) -> None:
         """Delete an empty file, or move an unreadable one to the quarantine.

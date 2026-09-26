@@ -11,7 +11,13 @@ from media_dedup.constants import KeepReason, MediaKind
 from media_dedup.errors import DecisionsError
 from media_dedup.plan.keeper import KeepPolicy
 from media_dedup.plan.models import CleanPlan, KeepDecision
-from media_dedup.plan.review import PairAction, PairChoice, apply_choices
+from media_dedup.plan.review import (
+    PairAction,
+    PairChoice,
+    ReviewChoices,
+    apply_choices,
+)
+from media_dedup.plan.similar_models import BurstChoice
 from media_dedup.report.decisions import read_decisions
 from media_dedup.scan.models import MediaFile
 
@@ -35,7 +41,7 @@ def group(keeper: MediaFile, *removable: MediaFile) -> CleanPlan:
 
 def reviewed(plan: CleanPlan, choices: Sequence[PairChoice]) -> KeepDecision:
     """Apply the choices and return the only group left."""
-    [decision] = apply_choices(plan, choices, POLICY).decisions
+    [decision] = apply_choices(plan, ReviewChoices(tuple(choices)), POLICY).decisions
     return decision
 
 
@@ -54,8 +60,8 @@ def test_skip_spares_the_pair_and_drops_empty_groups() -> None:
     assert decision.keeper == at(A)
     assert decision.removable == (at(C),)
     assert decision.spared == (at(B),)
-    both = [PairChoice(A, B, PairAction.SKIP), PairChoice(A, C, PairAction.SKIP)]
-    assert not apply_choices(plan, both, POLICY).decisions
+    both = (PairChoice(A, B, PairAction.SKIP), PairChoice(A, C, PairAction.SKIP))
+    assert not apply_choices(plan, ReviewChoices(both), POLICY).decisions
 
 
 def test_every_copy_a_decision_keeps_stays() -> None:
@@ -78,7 +84,8 @@ def test_swap_keeps_the_best_copy_of_the_folder() -> None:
 def test_undecided_groups_are_untouched() -> None:
     """Choices on other pairs change nothing."""
     plan = group(at(A), at(B))
-    assert apply_choices(plan, [PairChoice(C, B, PairAction.SWAP)], POLICY) == plan
+    choices = ReviewChoices((PairChoice(C, B, PairAction.SWAP),))
+    assert apply_choices(plan, choices, POLICY) == plan
 
 
 @pytest.mark.parametrize(
@@ -95,14 +102,37 @@ def test_undecided_groups_are_untouched() -> None:
             ),
             "decided twice",
         ),
+        (
+            (
+                '{"version": 1, "roots": [], '
+                '"bursts": [{"kept": ["a"], "discarded": ["a"]}]}'
+            ),
+            "a is decided twice",
+        ),
+        (
+            '{"version": 1, "roots": [], "bursts": [{"kept": [], "discarded": ["a"]}]}',
+            "not a valid decisions file",
+        ),
     ],
 )
 def test_invalid_files_are_refused(
     tmp_path: Path, content: str | None, error: str
 ) -> None:
-    """Missing, garbage, another version, a pair decided twice: refused."""
+    """Missing, garbage, another version, decided twice, nothing kept: refused."""
     path = tmp_path / "decisions.json"
     if content is not None:
         path.write_text(content)
     with pytest.raises(DecisionsError, match=error):
         read_decisions(path)
+
+
+def test_burst_shots_the_exact_tier_removes_are_not_moved_twice() -> None:
+    """A swap deletes the old keeper: its burst decision keeps only the other shots."""
+    plan = group(at(A), at(B))
+    shots = (at(A), at(A, "IMG_2.jpg"))
+    burst = BurstChoice(kept=(at(A, "IMG_3.jpg"),), discarded=shots)
+    choices = ReviewChoices((PairChoice(A, B, PairAction.SWAP),), (burst,))
+    [reviewed_burst] = apply_choices(plan, choices, POLICY).bursts
+    assert reviewed_burst.discarded == (at(A, "IMG_2.jpg"),)
+    only_removed = ReviewChoices(bursts=(BurstChoice(shots[-1:], shots[:1]),))
+    assert not apply_choices(group(at(B), at(A)), only_removed, POLICY).bursts

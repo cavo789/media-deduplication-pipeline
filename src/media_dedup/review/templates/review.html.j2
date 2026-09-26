@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+{# The keyboard review of burst series, served by `media-dedup review`. The page never
+   touches a photo: each choice is sent to the server, which saves the decisions file;
+   `clean --decisions` then moves the shots set aside, journaled. #}
+{% set texts = {
+  "position": _("Series {number} of {total}"),
+  "totals": _("Series with shots set aside: {series} · shots set aside: {shots}"),
+  "shots": _("{count} shots"),
+  "kept": "✅ " ~ _("kept"),
+  "aside": "📦 " ~ _("set aside"),
+  "protected": "🔒 " ~ _("protected folder, kept"),
+  "sharpest": "⭐ " ~ _("sharpest"),
+  "saving": _("Saving…"),
+  "saved": _("Saved in {file}.").replace("{file}", file),
+  "failed": _("Not saved (error {status})."),
+  "offline": _("The review is not running any more: start it again."),
+  "protectedShot": _("This shot lies in a protected folder: it is never moved."),
+  "keepOne": _("Keep at least one shot of the series."),
+  "first": _("This is the first series."),
+  "last": _("This is the last series: stop the review with Ctrl+C in the terminal."),
+} %}
+<html lang="{{ _('en') }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ _("Burst series review") }} — media-dedup</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1f2328; --muted: #656d76; --line: #d8dee4;
+    --accent: #0969da; --ok: #1a7f37; --warn: #9a6700; --bad: #cf222e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --card: #161b22; --text: #e6edf3; --muted: #8d96a0; --line: #30363d;
+      --accent: #4493f8; --ok: #3fb950; --warn: #d29922; --bad: #f85149;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header, footer { position: sticky; z-index: 1; padding: 8px 16px; background: var(--card); }
+  header { top: 0; display: flex; flex-wrap: wrap; gap: 4px 20px; align-items: baseline;
+           border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 1.1rem; margin: 0; }
+  footer { bottom: 0; border-top: 1px solid var(--line); font-size: .85rem; color: var(--muted); }
+  main { padding: 12px 16px 24px; }
+  .muted { color: var(--muted); }
+  #status.error { color: var(--bad); font-weight: 600; } #status.saved { color: var(--ok); }
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+  .shot { position: relative; margin: 0; padding: 8px; background: var(--card); cursor: pointer;
+          border: 2px solid var(--line); border-radius: 10px; }
+  .shot img { display: block; width: 100%; height: auto; max-height: 62vh; object-fit: contain;
+              border-radius: 6px; background: var(--bg); }
+  .shot.best { border-color: var(--ok); }
+  .shot.aside { border-color: var(--bad); } .shot.aside img { opacity: .3; }
+  .shot.protected { cursor: not-allowed; border-color: var(--warn); }
+  .shot .key { position: absolute; top: 14px; left: 14px; min-width: 30px; padding: 2px 8px;
+               text-align: center; font-weight: 650; background: var(--card);
+               border: 1px solid var(--line); border-radius: 6px; }
+  figcaption { margin-top: 6px; font-size: .85rem; overflow-wrap: anywhere; }
+  .state { font-weight: 600; color: var(--ok); } .aside .state { color: var(--bad); }
+  .protected .state { color: var(--warn); }
+  kbd { display: inline-block; padding: 0 6px; font: inherit; color: var(--text); background: var(--bg);
+        border: 1px solid var(--line); border-radius: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📸 {{ _("Burst series review") }}</h1>
+  <strong id="position"></strong>
+  <span id="totals" class="muted"></span>
+  <span id="status" role="status" aria-live="polite"></span>
+</header>
+<main>
+  <p id="series" class="muted"></p>
+  <div id="shots" class="shots"></div>
+</main>
+<footer>
+  <kbd>←</kbd> <kbd>→</kbd> {{ _("previous or next series") }} ·
+  <kbd>1</kbd>…<kbd>9</kbd> {{ _("set a shot aside, or keep it again") }} ·
+  <kbd>S</kbd> {{ _("keep only the sharpest") }} ·
+  <kbd>A</kbd> {{ _("keep every shot") }} ·
+  {{ _("a click on a shot works too") }}<br>
+  {{ _("Every choice is saved at once in %(file)s. Done? Ctrl+C in the terminal stops the review; then run the same 'clean' command with --decisions %(file)s: the shots set aside go to the quarantine, and 'undo' brings them back.", file=file) }}
+</footer>
+<script>
+(() => {
+  const T = {{ texts | tojson }};
+  const statePath = {{ state_path | tojson }};
+  const decidePath = {{ decide_path | tojson }};
+  const positionKey = "media-dedup:review:" + {{ file | tojson }};
+  const byId = (id) => document.getElementById(id);
+  const fill = (text, values) => text.replace(/\{(\w+)\}/g, (all, name) => (name in values ? String(values[name]) : all));
+  let series = [];
+  let current = 0;
+
+  const setStatus = (text, kind) => {
+    byId("status").textContent = text;
+    byId("status").className = kind || "";
+  };
+
+  const showTotals = () => {
+    const decided = series.filter((item) => item.discarded.length > 0);
+    const shots = decided.reduce((count, item) => count + item.discarded.length, 0);
+    byId("totals").textContent = fill(T.totals, { series: decided.length, shots: shots });
+  };
+
+  const line = (tag, text, css) => {
+    const element = document.createElement(tag);
+    element.textContent = text;
+    if (css) element.className = css;
+    return element;
+  };
+
+  const card = (item, shot, rank) => {
+    const aside = item.discarded.includes(rank);
+    const figure = document.createElement("figure");
+    figure.className = ["shot", aside ? "aside" : "", shot.best ? "best" : "", shot.protected ? "protected" : ""].join(" ");
+    const image = document.createElement("img");
+    image.src = shot.preview;
+    image.alt = shot.name;
+    const state = shot.protected ? T.protected : aside ? T.aside : T.kept;
+    const caption = document.createElement("figcaption");
+    caption.append(
+      line("div", shot.best ? state + " · " + T.sharpest : state, "state"),
+      line("strong", shot.name),
+      line("div", shot.folder, "muted"),
+      line("div", shot.details, "muted"),
+    );
+    figure.append(line("span", rank < 9 ? String(rank + 1) : "·", "key"), image, caption);
+    figure.addEventListener("click", () => toggle(rank));
+    return figure;
+  };
+
+  const prefetch = (index) => {
+    if (index >= series.length) return;
+    for (const shot of series[index].shots) new Image().src = shot.preview;
+  };
+
+  const render = () => {
+    const item = series[current];
+    byId("position").textContent = fill(T.position, { number: current + 1, total: series.length });
+    byId("series").textContent = [item.camera, fill(T.shots, { count: item.shots.length })].filter(Boolean).join(" · ");
+    byId("shots").replaceChildren(...item.shots.map((shot, rank) => card(item, shot, rank)));
+    showTotals();
+    prefetch(current + 1);
+    try {
+      window.localStorage.setItem(positionKey, String(current));
+    } catch (error) {
+      // Storage refused (private browsing): the review starts at the first series next time.
+    }
+  };
+
+  const decide = async (index, discarded) => {
+    setStatus(T.saving);
+    let response;
+    try {
+      response = await fetch(decidePath, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ series: index, discarded: discarded }),
+      });
+    } catch (error) {
+      setStatus(T.offline, "error");
+      return;
+    }
+    const answer = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setStatus(answer.error || fill(T.failed, { status: response.status }), "error");
+      return;
+    }
+    series[index].discarded = [...discarded].sort((a, b) => a - b);
+    setStatus(T.saved, "saved");
+    render();
+  };
+
+  const toggle = (rank) => {
+    const item = series[current];
+    if (!item || rank >= item.shots.length) return;
+    if (item.shots[rank].protected) {
+      setStatus(T.protectedShot, "error");
+      return;
+    }
+    const aside = new Set(item.discarded);
+    if (aside.has(rank)) aside.delete(rank);
+    else aside.add(rank);
+    if (aside.size === item.shots.length) {
+      setStatus(T.keepOne, "error");
+      return;
+    }
+    decide(current, [...aside]);
+  };
+
+  const keepSharpest = () => {
+    const shots = series[current].shots;
+    decide(current, shots.map((shot, rank) => rank).filter((rank) => !shots[rank].best && !shots[rank].protected));
+  };
+
+  const go = (step) => {
+    const next = current + step;
+    if (next < 0 || next >= series.length) {
+      setStatus(next < 0 ? T.first : T.last);
+      return;
+    }
+    current = next;
+    setStatus("");
+    render();
+    window.scrollTo(0, 0);
+  };
+
+  document.addEventListener("keydown", (event) => {
+    if (event.ctrlKey || event.metaKey || event.altKey || series.length === 0) return;
+    // Digits by physical key: on an AZERTY keyboard the top row gives "&", "é"... without Shift.
+    const digit = /^(?:Digit|Numpad)([1-9])$/.exec(event.code);
+    const key = event.key.toLowerCase();
+    if (digit) toggle(Number(digit[1]) - 1);
+    else if (event.key === "ArrowRight" || event.key === " ") go(1);
+    else if (event.key === "ArrowLeft") go(-1);
+    else if (key === "s") keepSharpest();
+    else if (key === "a") decide(current, []);
+    else return;
+    event.preventDefault();
+  });
+
+  fetch(statePath)
+    .then((response) => response.json())
+    .then((state) => {
+      series = state.series;
+      let saved = 0;
+      try {
+        saved = Number(window.localStorage.getItem(positionKey)) || 0;
+      } catch (error) {
+        saved = 0;
+      }
+      current = saved < series.length ? saved : 0;
+      render();
+    })
+    .catch(() => setStatus(T.offline, "error"));
+})();
+</script>
+</body>
+</html>

@@ -15,7 +15,8 @@ if TYPE_CHECKING:
 # Actions undone by moving the file back from the quarantine.
 QUARANTINED: Final = frozenset(
     {ActionKind.QUARANTINE, ActionKind.QUARANTINE_NEAR}
-    | {ActionKind.QUARANTINE_DUPLICATE, ActionKind.QUARANTINE_SIDECAR},
+    | {ActionKind.QUARANTINE_DUPLICATE, ActionKind.QUARANTINE_SIDECAR}
+    | {ActionKind.QUARANTINE_BURST},
 )
 
 

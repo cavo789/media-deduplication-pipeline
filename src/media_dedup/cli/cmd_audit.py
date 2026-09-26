@@ -72,6 +72,13 @@ def audit_command(  # pylint: disable=too-many-arguments
                 "'clean --tier near' moves near duplicates to the quarantine."
             ),
         )
+    if findings.similar.bursts:
+        output.tip(
+            _(
+                "Sort the burst series with the keyboard: 'media-dedup review' (add "
+                "-p 127.0.0.1::8080 to docker run)."
+            ),
+        )
     if not runtime.persistent(MountKind.CACHE):
         output.tip(
             _("Add -v media-dedup-cache:/cache: the next audits will be much faster.")

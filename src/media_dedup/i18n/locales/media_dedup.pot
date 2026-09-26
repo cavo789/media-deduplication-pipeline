@@ -55,6 +55,9 @@ msgstr ""
 msgid "Add -v \"<a folder of yours>:/reports\" to get HTML reports."
 msgstr ""
 
+msgid "Add -v \"<a folder of yours>:/reports\" to the docker run command."
+msgstr ""
+
 msgid "Add -v \"<a folder of yours>:/reports\", as in the Czkawka command."
 msgstr ""
 
@@ -119,7 +122,16 @@ msgstr ""
 msgid "Burst series"
 msgstr ""
 
-msgid "Burst series (listed, never cleaned)"
+msgid "Burst series (moved only if set aside with 'review')"
+msgstr ""
+
+msgid "Burst series review"
+msgstr ""
+
+msgid "Burst shots you set aside go to /quarantine: mount it."
+msgstr ""
+
+msgid "COMMAND [ARGS]..."
 msgstr ""
 
 msgid "Cannot ask for confirmation without an interactive terminal."
@@ -127,6 +139,10 @@ msgstr ""
 
 #, python-brace-format
 msgid "Cannot read the decisions file {path}."
+msgstr ""
+
+#, python-brace-format
+msgid "Cannot save the decisions file: {error}."
 msgstr ""
 
 #, python-brace-format
@@ -298,6 +314,14 @@ msgid ""
 "no server needed."
 msgstr ""
 
+#, python-format
+msgid ""
+"Every choice is saved at once in %(file)s. Done? Ctrl+C in the terminal "
+"stops the review; then run the same 'clean' command with --decisions "
+"%(file)s: the shots set aside go to the quarantine, and 'undo' brings "
+"them back."
+msgstr ""
+
 msgid "Every copy"
 msgstr ""
 
@@ -313,10 +337,18 @@ msgstr ""
 msgid "File"
 msgstr ""
 
+msgid ""
+"File the decisions are saved in, and resumed from. A relative path lies "
+"in the folder mounted on /reports. Default: decisions.json."
+msgstr ""
+
 msgid "Files"
 msgstr ""
 
 msgid "Files changed since the report: audit again and decide on it."
+msgstr ""
+
+msgid "Files changed since the review: run 'review' again."
 msgstr ""
 
 msgid "Files left untouched"
@@ -424,7 +456,16 @@ msgstr ""
 msgid "Invalid configuration ({details})."
 msgstr ""
 
+#, python-brace-format
+msgid ""
+"Its address on your computer: run 'docker port {container} {port}' in "
+"another terminal, then open http://<that address> in your browser."
+msgstr ""
+
 msgid "KB"
+msgstr ""
+
+msgid "Keep at least one shot of the series."
 msgstr ""
 
 msgid "Kept"
@@ -491,6 +532,9 @@ msgstr ""
 msgid "Moved to the quarantine"
 msgstr ""
 
+msgid "Name another file with --decisions, or mount the same folders."
+msgstr ""
+
 msgid "Near duplicates"
 msgstr ""
 
@@ -510,7 +554,16 @@ msgid ""
 "files elsewhere ARE deleted (a \"master library\")."
 msgstr ""
 
+#, python-brace-format
+msgid ""
+"Next: the same 'clean' command with --decisions {file}; the shots set "
+"aside go to the quarantine, 'undo' brings them back."
+msgstr ""
+
 msgid "No Czkawka results yet: run Czkawka first (PowerShell):"
+msgstr ""
+
+msgid "No burst series: nothing to review."
 msgstr ""
 
 msgid "No clean run found in the journal."
@@ -560,6 +613,10 @@ msgid ""
 "for byte, and their copies are moved to the quarantine."
 msgstr ""
 
+#, python-brace-format
+msgid "Not saved (error {status})."
+msgstr ""
+
 msgid "Not the folder you want to keep?"
 msgstr ""
 
@@ -596,6 +653,9 @@ msgstr ""
 msgid "Open index.html in the folder mounted on /reports: it lists every report."
 msgstr ""
 
+msgid "Open the review at 127.0.0.1 or localhost."
+msgstr ""
+
 msgid "Origin"
 msgstr ""
 
@@ -622,6 +682,11 @@ msgid ""
 "Photo groups picked across the whole plan, the same ones on every run. "
 "The list after it starts with the largest files, often videos without "
 "preview."
+msgstr ""
+
+msgid ""
+"Port of the page inside the container; publish it with -p 127.0.0.1::8080"
+" so that Docker chooses a free one on your computer. Default: 8080."
 msgstr ""
 
 msgid ""
@@ -686,6 +751,18 @@ msgstr ""
 msgid "Restoring"
 msgstr ""
 
+#, python-brace-format
+msgid ""
+"Review ready on port {port}: each decision is saved at once in {file}. "
+"Ctrl+C stops the review."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Review stopped — series with shots set aside: {series}, shots set aside: "
+"{shots}."
+msgstr ""
+
 msgid ""
 "Right before deleting, 'clean' compares the two files again, byte by "
 "byte, and skips any difference."
@@ -746,6 +823,13 @@ msgid ""
 " if the folders or the pairs changed in the meantime."
 msgstr ""
 
+#, python-brace-format
+msgid "Saved in {file}."
+msgstr ""
+
+msgid "Saving…"
+msgstr ""
+
 msgid "Scan (override scan.* of config.toml)"
 msgstr ""
 
@@ -758,22 +842,40 @@ msgid ""
 msgstr ""
 
 #, python-brace-format
+msgid "Series with shots set aside: {series} · shots set aside: {shots}"
+msgstr ""
+
+#, python-brace-format
+msgid "Series {number} of {total}"
+msgstr ""
+
+#, python-brace-format
 msgid "Set aside, as media-dedup does not analyse them: {details}."
+msgstr ""
+
+msgid ""
+"Set burst shots aside, one series at a time, with the keyboard in your "
+"browser; 'clean --decisions' then moves them."
 msgstr ""
 
 msgid "Setting"
 msgstr ""
 
 msgid ""
-"Shots of one camera, taken seconds apart. This is not duplication: "
-"nothing here is ever cleaned. The sharpest shot of each series is "
-"suggested; the choice is yours."
+"Shots of one camera, taken seconds apart. This is not duplication: a "
+"plain 'clean' never touches them. The sharpest shot of each series is "
+"suggested; the choice is yours: 'media-dedup review' shows the series one"
+" at a time to set shots aside, and 'clean --decisions' moves them to the "
+"quarantine."
 msgstr ""
 
 msgid "Show every setting, where it comes from, and the mount points."
 msgstr ""
 
 msgid "Show the version and exit."
+msgstr ""
+
+msgid "Show this message and exit."
 msgstr ""
 
 msgid ""
@@ -795,6 +897,11 @@ msgstr ""
 msgid ""
 "Software folders (.git, node_modules, AppData, Program Files, ...) are "
 "skipped: there, where a file lies makes a program work."
+msgstr ""
+
+msgid ""
+"Sort the burst series with the keyboard: 'media-dedup review' (add -p "
+"127.0.0.1::8080 to docker run)."
 msgstr ""
 
 msgid "Space"
@@ -827,12 +934,18 @@ msgstr ""
 msgid "The current folder (PowerShell, or bash on WSL, Linux, macOS):"
 msgstr ""
 
+msgid "The decisions are saved in /reports: mount it, or they are lost."
+msgstr ""
+
 msgid "The quarantine is empty."
 msgstr ""
 
 msgid ""
 "The quickest check: which folder keeps its copies, which folder loses "
 "them. Open a pair to see every copy."
+msgstr ""
+
+msgid "The review is not running any more: start it again."
 msgstr ""
 
 #, python-brace-format
@@ -852,6 +965,12 @@ msgstr ""
 msgid "The whole plan as a spreadsheet (CSV): every group, every file"
 msgstr ""
 
+msgid "There is no such series."
+msgstr ""
+
+msgid "There is no such shot in this series."
+msgstr ""
+
 #, python-brace-format
 msgid ""
 "These decisions were made on other folders ({theirs}); this run analyses "
@@ -860,6 +979,15 @@ msgstr ""
 
 #, python-brace-format
 msgid "These folders are mounted read-only: {folders}."
+msgstr ""
+
+msgid "This is the first series."
+msgstr ""
+
+msgid "This is the last series: stop the review with Ctrl+C in the terminal."
+msgstr ""
+
+msgid "This shot lies in a protected folder: it is never moved."
 msgstr ""
 
 msgid ""
@@ -877,6 +1005,9 @@ msgstr ""
 
 #, python-brace-format
 msgid "Unknown run {run_id}."
+msgstr ""
+
+msgid "Usage:"
 msgstr ""
 
 msgid "Value"
@@ -906,6 +1037,12 @@ msgid "Your decision"
 msgstr ""
 
 #, python-brace-format
+msgid ""
+"Your decisions — burst series reviewed: {series}, shots set aside: "
+"{shots}."
+msgstr ""
+
+#, python-brace-format
 msgid "Your decisions — pairs swapped: {swapped}, pairs left alone: {skipped}."
 msgstr ""
 
@@ -922,6 +1059,9 @@ msgid "[yellow]not mounted[/] — nothing kept after the run"
 msgstr ""
 
 msgid "[yellow]not mounted[/] — nothing to analyse"
+msgstr ""
+
+msgid "a click on a shot works too"
 msgstr ""
 
 msgid "a file changed since the audit"
@@ -963,8 +1103,9 @@ msgstr ""
 
 msgid ""
 "decisions.json downloaded from an audit report (swap or leave alone some "
-"folder pairs). A relative path is read from the folder mounted on "
-"/reports. The file is refused if the folders or the pairs changed."
+"folder pairs) or written by 'review' (burst shots set aside). A relative "
+"path is read from the folder mounted on /reports. The file is refused if "
+"the folders, the pairs or the series changed."
 msgstr ""
 
 msgid "default"
@@ -993,7 +1134,7 @@ msgstr ""
 msgid ""
 "exact: delete byte-for-byte copies only. near: also move near duplicates "
 "(resized or recompressed copies) to the quarantine; check them in the "
-"report first."
+"report first. Default: exact."
 msgstr ""
 
 msgid "ffprobe not found: videos are not checked."
@@ -1018,6 +1159,12 @@ msgstr ""
 msgid "keep"
 msgstr ""
 
+msgid "keep every shot"
+msgstr ""
+
+msgid "keep only the sharpest"
+msgstr ""
+
 msgid "kept"
 msgstr ""
 
@@ -1039,6 +1186,9 @@ msgstr ""
 msgid "move to the quarantine"
 msgstr ""
 
+msgid "no shot kept from its series is left"
+msgstr ""
+
 msgid "only Czkawka"
 msgstr ""
 
@@ -1054,6 +1204,9 @@ msgstr ""
 msgid "preferred folder"
 msgstr ""
 
+msgid "previous or next series"
+msgstr ""
+
 msgid "protected folder"
 msgstr ""
 
@@ -1066,10 +1219,20 @@ msgstr ""
 msgid "run"
 msgstr ""
 
+msgid "set a shot aside, or keep it again"
+msgstr ""
+
+msgid "set aside"
+msgstr ""
+
 msgid "sharpest"
 msgstr ""
 
 msgid "sharpness"
+msgstr ""
+
+#, python-brace-format
+msgid "sharpness {value}"
 msgstr ""
 
 msgid "the file already exists"
@@ -1114,6 +1277,12 @@ msgstr ""
 
 msgid "your decision in the report"
 msgstr ""
+
+#, python-brace-format
+msgid "{count} burst shot you set aside will be moved to the quarantine."
+msgid_plural "{count} burst shots you set aside will be moved to the quarantine."
+msgstr[0] ""
+msgstr[1] ""
 
 #, python-brace-format
 msgid ""
@@ -1176,6 +1345,22 @@ msgstr[0] ""
 msgstr[1] ""
 
 #, python-brace-format
+msgid "{count} reviewed burst series no longer matches the audit, e.g. {path}."
+msgid_plural "{count} reviewed burst series no longer match the audit, e.g. {path}."
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid "{count} series reviewed earlier changed since: reviewed again."
+msgid_plural "{count} series reviewed earlier changed since: reviewed again."
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid "{count} shots"
+msgstr ""
+
+#, python-brace-format
 msgid "{folder} (seen as {first} and as {second})"
 msgstr ""
 
@@ -1192,11 +1377,19 @@ msgid "{name} must be a JSON array, e.g. [\"C:\\\\Photos\"]"
 msgstr ""
 
 #, python-brace-format
+msgid "{path} is in a protected folder: it is never moved."
+msgstr ""
+
+#, python-brace-format
 msgid "{path} is not a Czkawka result file."
 msgstr ""
 
 #, python-brace-format
 msgid "{path} is not a valid decisions file ({error})."
+msgstr ""
+
+#, python-brace-format
+msgid "{path} was made on other folders ({theirs}); this review analyses {ours}."
 msgstr ""
 
 #, python-brace-format

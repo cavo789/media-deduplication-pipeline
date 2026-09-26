@@ -1,9 +1,10 @@
-"""Small JPEG previews for the report, generated in worker processes."""
+"""JPEG previews, generated in worker processes: small for reports, large for review."""
 
 from __future__ import annotations
 
 import asyncio
 import hashlib
+import io
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
@@ -23,6 +24,9 @@ if TYPE_CHECKING:
 
 PREVIEWABLE: Final = frozenset({MediaKind.IMAGE, MediaKind.RAW})
 _JPEG_QUALITY = 80
+# Large enough to judge sharpness on a screen, small enough to load at once.
+_REVIEW_EDGE: Final = 1600
+_REVIEW_QUALITY: Final = 88
 _THUMBNAIL_NAME_LENGTH = 20
 _THUMBNAIL_ERRORS = (
     ValueError,
@@ -77,6 +81,29 @@ def make_thumbnail(job: ThumbnailJob) -> bool:
     finally:
         ImageFile.LOAD_TRUNCATED_IMAGES = False
     return True
+
+
+def review_preview(source: Path) -> bytes | None:
+    """Render a picture for the review page, tolerating truncated images.
+
+    Args:
+        source: Image or RAW file.
+
+    Returns:
+        The JPEG bytes, or None when the picture cannot be decoded.
+    """
+    prepare_image_worker()
+    ImageFile.LOAD_TRUNCATED_IMAGES = True
+    try:
+        preview = _upright(source)
+        preview.thumbnail((_REVIEW_EDGE, _REVIEW_EDGE))
+        buffer = io.BytesIO()
+        preview.save(buffer, "JPEG", quality=_REVIEW_QUALITY)
+    except (*_THUMBNAIL_ERRORS, OSError):
+        return None
+    finally:
+        ImageFile.LOAD_TRUNCATED_IMAGES = False
+    return buffer.getvalue()
 
 
 def _upright(source: Path) -> Image.Image:

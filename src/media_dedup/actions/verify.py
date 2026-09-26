@@ -62,6 +62,24 @@ def near_blocker(keeper: Path, candidate: MediaFile) -> str | None:
     return change_blocker(candidate)
 
 
+def burst_blocker(kept: tuple[MediaFile, ...], candidate: MediaFile) -> str | None:
+    """Explain why a burst shot set aside must not be moved, or return None.
+
+    The shot was set aside because another shot of its series is better: one of them
+    must still be there, and the shot must be exactly the file the review showed.
+
+    Args:
+        kept: The shots of the series the review kept.
+        candidate: The shot about to be moved to the quarantine, as audited.
+
+    Returns:
+        The translated reason to skip, or None.
+    """
+    if not any(shot.path.is_file() for shot in kept):
+        return _("no shot kept from its series is left")
+    return change_blocker(candidate)
+
+
 def change_blocker(file: MediaFile) -> str | None:
     """Explain why a file is no longer the one the audit saw, or return None.
 

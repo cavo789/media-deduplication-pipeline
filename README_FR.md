@@ -105,7 +105,7 @@ Dossiers partageant des fichiers identiques
 | Fichiers cassés | Les fichiers vides (0 octet) et ceux qui ne s'ouvrent pas (JPEG ou fichier RAW tronqué, vidéo abîmée). `clean` supprime les vides et déplace les autres en quarantaine, sans jamais les supprimer directement. |
 | Fichiers compagnons orphelins | Les [fichiers compagnons](#fichiers-compagnons) (`.xmp`, `.aae`, `.thm`) sans plus aucun fichier du même nom à côté d'eux une fois `clean` passé. Déplacés en quarantaine. |
 | Quasi-doublons | La même photo enregistrée à nouveau : réduite (WhatsApp), recompressée, pivotée, ou sans sa date EXIF. Ce ne sont pas des fichiers identiques : `clean` n'y touche pas, sauf si vous ajoutez `--tier near`, voir [plus bas](#quasi-doublons-et-rafales). |
-| Rafales | Des photos d'un même appareil prises à quelques secondes d'intervalle. Listées avec la plus nette suggérée, jamais nettoyées. |
+| Rafales | Des photos d'un même appareil prises à quelques secondes d'intervalle. Listées avec la plus nette suggérée ; `clean` ne déplace que les photos que vous [écartez avec `review`](#trier-les-rafales-au-clavier). |
 | Durée | Le temps qu'a pris tout l'audit. |
 
 Chaque phrase de *Dossiers partageant des fichiers identiques* décrit deux dossiers qui
@@ -244,9 +244,9 @@ vérifie que la photo est lisible, et gardées dans le cache.
   haute résolution est gardée. Le rapport montre chaque groupe côte à côte, avec la
   résolution, la taille et la netteté de chaque copie.
 - **Rafales** : des photos d'un même appareil, à quelques secondes d'intervalle, de la même
-  scène. C'est du tri, pas des doublons : elles sont seulement listées, la plus nette
-  suggérée. Rien dans une série n'est jamais nettoyé, et une photo de rafale n'est jamais
-  prise pour un quasi-doublon.
+  scène. C'est du tri, pas des doublons : elles sont listées, la plus nette suggérée. Un
+  simple `clean` n'y touche jamais, et une photo de rafale n'est jamais prise pour un
+  quasi-doublon. Vous choisissez les photos qui partent, [au clavier](#trier-les-rafales-au-clavier).
 
 Un simple `clean` ne touche jamais aux quasi-doublons. Après les avoir vérifiés dans le
 rapport, ajoutez `--tier near` : les copies sont **déplacées en quarantaine** (elles ne sont
@@ -261,6 +261,45 @@ docker run --rm -it `
   -v "$HOME\media-dedup\quarantine:/quarantine" `
   cavo789/media-dedup clean --tier near
 ```
+
+### Trier les rafales au clavier
+
+Trier des milliers de photos de rafale fichier par fichier est fastidieux. `review` analyse,
+puis sert dans votre navigateur une page qui montre **une série à la fois**, chaque photo en
+grand, la plus nette marquée ⭐ :
+
+| Touche | Action |
+|---|---|
+| `←` `→` (ou espace) | Série précédente ou suivante |
+| `1` … `9` | Écarter cette photo, ou la garder à nouveau (un clic sur la photo fonctionne aussi) |
+| `S` | Ne garder que la photo la plus nette |
+| `A` | Garder toutes les photos de la série |
+
+Chaque choix est **enregistré aussitôt** dans `decisions.json`, dans le dossier monté sur
+`/reports` : arrêtez avec Ctrl+C quand vous voulez, le `review` suivant reprend vos choix. Une
+photo d'un dossier protégé n'est jamais écartée, et chaque série garde toujours au moins une
+photo.
+
+```powershell
+docker run --rm -it --name media-dedup-review -p 127.0.0.1::8080 `
+  -v "C:\Photos:/data/c/Photos:ro" `
+  -v "$HOME\media-dedup\reports:/reports" `
+  -v media-dedup-cache:/cache `
+  cavo789/media-dedup review
+```
+
+`-p 127.0.0.1::8080` laisse Docker choisir un port libre, joignable depuis votre ordinateur
+seulement. Une fois l'analyse terminée, lancez `docker port media-dedup-review 8080` dans un
+autre terminal : il donne l'adresse à ouvrir dans votre navigateur (par exemple
+`127.0.0.1:49153`).
+
+La page ne touche jamais une photo. Une fois le tri fini, ajoutez `--decisions decisions.json` à
+la [commande `clean`](#aller-plus-loin) : les photos écartées sont **déplacées en quarantaine**
+(ce ne sont pas des copies, rien ne pourrait les reconstruire), `undo` les remet en place et
+`purge` les supprime définitivement. Le fichier est refusé si une série a changé depuis le tri ;
+donnez à `review` et à `clean` les mêmes options `--prefer`, `--protect` et `--exclude`. Le même
+fichier peut aussi contenir les [décisions sur les paires de dossiers](#aller-plus-loin) d'un
+rapport : `review` les conserve.
 
 ### Fichiers compagnons
 
@@ -340,6 +379,7 @@ les programmes et leurs données s'y trouvent aussi.
 | Doublons | Réellement supprimés (l'espace est libéré tout de suite) ; `undo` les reconstruit depuis la copie conservée, date comprise, même d'un disque à l'autre. |
 | Fichiers illisibles | Déplacés en quarantaine, jamais supprimés directement ; `purge` les supprime définitivement quand vous êtes sûr·e. |
 | Quasi-doublons | Jamais touchés par défaut. Avec `--tier near`, déplacés en quarantaine (jamais supprimés) après vérification : la photo gardée existe toujours, la copie est bien le fichier vu par l'audit. `undo` les remet en place. |
+| Rafales | Jamais touchées par défaut. Les photos que vous [écartez avec `review`](#trier-les-rafales-au-clavier) sont déplacées en quarantaine (jamais supprimées) par `clean --decisions`, après vérification : une photo gardée est toujours là, la photo écartée est bien le fichier montré par le tri. `undo` les remet en place. |
 | Autres types de fichiers | Seulement s'ils sont demandés avec `--ext` : [leurs copies](#autres-types-de-fichiers) sont déplacées en quarantaine (jamais supprimées), et les dossiers de logiciels (`.git`, `node_modules`, `AppData`, …) sont ignorés. |
 | Fichiers compagnons | Jamais touchés à côté de leur photo. Un orphelin est déplacé en quarantaine (jamais supprimé) après vérification : inchangé depuis l'audit, et aucun fichier du même nom à côté de lui. `undo` le remet en place. |
 | Chaque groupe | Garde toujours au moins une copie. |
@@ -351,8 +391,8 @@ les programmes et leurs données s'y trouvent aussi.
 | `/data/<lecteur>/<chemin>` | Les dossiers à analyser (`C:\Photos` → `/data/c/Photos`). | toujours ; `:ro` pour `audit` |
 | `/config` | `config.toml` uniquement, créé et commenté au premier lancement. | facultatif |
 | `/journal` | Un journal JSONL par nettoyage. | **obligatoire** pour `clean`, `undo`, `history` |
-| `/quarantine` | Fichiers illisibles, fichiers compagnons orphelins, quasi-doublons et copies d'autres types de fichiers mis de côté par `clean`. | pour les traiter |
-| `/reports` | Un dossier par exécution (`report.html`, une page par paire de dossiers, vignettes, `plan.csv`) et `index.html`. | facultatif |
+| `/quarantine` | Fichiers illisibles, fichiers compagnons orphelins, quasi-doublons, photos de rafale écartées et copies d'autres types de fichiers déplacés par `clean`. | pour les traiter |
+| `/reports` | Un dossier par exécution (`report.html`, une page par paire de dossiers, vignettes, `plan.csv`), `index.html`, et le `decisions.json` de `review`. | facultatif ; **obligatoire** pour `review` |
 | `/cache` | Index SQLite : les audits suivants ne relisent que les fichiers nouveaux ou modifiés. | facultatif, recommandé |
 
 Chaque montage manquant ou non accessible en écriture est expliqué par une astuce 💡. L'image
@@ -363,6 +403,7 @@ fonctionne aussi avec `--read-only --tmpfs /tmp`.
 | Commande | Rôle |
 |---|---|
 | `audit` | Trouve les doublons exacts et les fichiers cassés. N'écrit jamais dans `/data`. |
+| `review` | Analyse, puis [trie les rafales](#trier-les-rafales-au-clavier) dans votre navigateur, une à la fois, au clavier. N'écrit jamais dans `/data`. |
 | `clean` | Audite, demande confirmation, puis supprime les copies en double et les fichiers vides, et met les fichiers illisibles et les fichiers compagnons orphelins en quarantaine. |
 | `undo [EXÉCUTION]` | Restaure chaque fichier d'un nettoyage (le plus récent par défaut). |
 | `history` | Liste les nettoyages : fichiers supprimés, espace libéré, quarantaine, restaurations. |
@@ -378,13 +419,14 @@ Les options globales se placent **avant** la commande : `media-dedup --locale fr
 | `--locale en\|fr` | Langue de l'interface (anglais par défaut) ; les nombres et tailles la suivent : `67,947` et `44.3 GB`, ou `67.947` et `44,3 Go`. |
 | `--verbosity error\|warning\|info\|debug` | Niveau de détail des journaux. |
 | `--color auto\|always\|never` | Couleurs ANSI (`NO_COLOR` est respecté). |
-| `--prefer CHEMIN` | (`audit`, `clean`, `crosscheck`) Dossier dont les copies sont conservées en priorité ; répétable, l'ordre compte. |
-| `--protect CHEMIN` | (`audit`, `clean`, `crosscheck`) Dossier jamais modifié ; ses fichiers sont les copies conservées. |
-| `--exclude CHEMIN` | (`audit`, `clean`, `crosscheck`) Dossier jamais analysé. |
+| `--prefer CHEMIN` | (`audit`, `review`, `clean`, `crosscheck`) Dossier dont les copies sont conservées en priorité ; répétable, l'ordre compte. |
+| `--protect CHEMIN` | (`audit`, `review`, `clean`, `crosscheck`) Dossier jamais modifié ; ses fichiers sont les copies conservées. |
+| `--exclude CHEMIN` | (`audit`, `review`, `clean`, `crosscheck`) Dossier jamais analysé. |
 | `--ext EXT` | (`audit`, `clean`, `crosscheck`) N'analyse que ces extensions (`--ext png,webp`) ; toutes celles des photos, RAW et vidéos par défaut. [D'autres types](#autres-types-de-fichiers) aussi (`--ext pdf,docx`). |
 | `--yes`, `-y` | (`clean`, `purge`) Ne pas demander de confirmation. |
 | `--tier exact\|near` | (`clean`) `exact` (par défaut) : seulement les copies identiques octet par octet. `near` : déplace aussi les [quasi-doublons](#quasi-doublons-et-rafales) en quarantaine. |
-| `--decisions FICHIER` | (`clean`) Applique les [décisions sur les paires de dossiers téléchargées depuis un rapport](#aller-plus-loin) ; un chemin relatif est lu dans `/reports`. |
+| `--decisions FICHIER` | (`clean`) Applique les [décisions sur les paires de dossiers téléchargées depuis un rapport](#aller-plus-loin) et les photos de rafale [écartées avec `review`](#trier-les-rafales-au-clavier) ; un chemin relatif est lu dans `/reports`. (`review`) Le fichier où les choix sont enregistrés, `decisions.json` par défaut. |
+| `--port PORT` | (`review`) Port de la page dans le conteneur, `8080` par défaut ; publiez-le avec `-p 127.0.0.1::8080`. |
 
 `media-dedup --help` et `media-dedup <commande> --help` documentent tout, dans les deux langues.
 

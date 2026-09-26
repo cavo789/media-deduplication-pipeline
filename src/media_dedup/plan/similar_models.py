@@ -38,10 +38,22 @@ class NearDecision:
 
 @dataclass(frozen=True, slots=True)
 class BurstSeries:
-    """Shots of one burst: curation, not duplication — never cleaned."""
+    """Shots of one burst: curation, not duplication — only a review sets any aside."""
 
     shots: tuple[MediaFile, ...]
     best: MediaFile
+
+
+@dataclass(frozen=True, slots=True)
+class BurstChoice:
+    """The shots of one burst series a review set aside (`media-dedup review`).
+
+    Set aside, not duplicated: `clean --decisions` moves them to the quarantine, never
+    deletes them, and only while at least one `kept` shot is still there.
+    """
+
+    kept: tuple[MediaFile, ...]
+    discarded: tuple[MediaFile, ...]
 
 
 @dataclass(frozen=True, slots=True)

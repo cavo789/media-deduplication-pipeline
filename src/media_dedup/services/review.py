@@ -1,8 +1,9 @@
 """`clean --decisions`: check a review against the audit, then apply it to the plan.
 
 The decisions file is read before the audit (a wrong path fails at once) and checked
-after it: made on the same folders, about pairs that still exist, and never asking to
-delete the copies of a protected folder. Anything else refuses the whole file.
+after it: made on the same folders, about pairs and burst series that still exist, and
+never asking to delete the copies of a protected folder. Anything else refuses the
+whole file.
 """
 
 from __future__ import annotations
@@ -13,8 +14,14 @@ from media_dedup.errors import DecisionsError
 from media_dedup.i18n import _, ngettext
 from media_dedup.paths.host_paths import is_within
 from media_dedup.plan.pairs import folder_pairs
-from media_dedup.plan.review import PairAction, PairChoice, apply_choices
+from media_dedup.plan.review import (
+    PairAction,
+    PairChoice,
+    ReviewChoices,
+    apply_choices,
+)
 from media_dedup.report.decisions import read_decisions
+from media_dedup.services.burst_review import burst_choices
 from media_dedup.services.policy import keep_policy
 
 if TYPE_CHECKING:
@@ -36,13 +43,25 @@ def load_review(runtime: Runtime, source: Path) -> DecisionsFile:
     Returns:
         The decisions.
     """
-    reports_dir = runtime.locations.reports_dir
-    return read_decisions(source if source.is_absolute() else reports_dir / source)
+    return read_decisions(decisions_path(runtime, source))
+
+
+def decisions_path(runtime: Runtime, source: Path) -> Path:
+    """Resolve a `--decisions` value: a relative path lies in the reports folder.
+
+    Args:
+        runtime: Settings, mount points and output.
+        source: `--decisions` value.
+
+    Returns:
+        The file, in the container.
+    """
+    return source if source.is_absolute() else runtime.locations.reports_dir / source
 
 
 def review_choices(
     runtime: Runtime, findings: AuditFindings, review: DecisionsFile
-) -> tuple[PairChoice, ...]:
+) -> ReviewChoices:
     """Check that the decisions were made on this very audit, and translate them.
 
     Args:
@@ -54,8 +73,8 @@ def review_choices(
         The decisions, in container paths.
 
     Raises:
-        DecisionsError: Other folders, a pair that no longer exists, or an
-            impossible swap.
+        DecisionsError: Other folders, a pair or a series that no longer exists, or
+            an impossible swap or move.
     """
     mapper = runtime.mapper
     ours = mapper.roots_on_host(findings.roots)
@@ -87,11 +106,14 @@ def review_choices(
     choices = [(pairs[d.kept_in, d.removed_from], d.action) for d in review.pairs]
     for pair, action in choices:
         _check_swap(runtime, pair, action)
-    return tuple(PairChoice(p.kept_in, p.removed_from, a) for p, a in choices)
+    return ReviewChoices(
+        pairs=tuple(PairChoice(p.kept_in, p.removed_from, a) for p, a in choices),
+        bursts=burst_choices(runtime, findings, review.bursts),
+    )
 
 
 def apply_review(
-    runtime: Runtime, plan: CleanPlan, choices: tuple[PairChoice, ...]
+    runtime: Runtime, plan: CleanPlan, choices: ReviewChoices
 ) -> CleanPlan:
     """Apply checked decisions to the plan, and say what they change.
 
@@ -103,12 +125,22 @@ def apply_review(
     Returns:
         The plan, decisions applied.
     """
-    swapped = sum(choice.action is PairAction.SWAP for choice in choices)
-    runtime.output.info(
-        _(
-            "Your decisions — pairs swapped: {swapped}, pairs left alone: {skipped}."
-        ).format(swapped=swapped, skipped=len(choices) - swapped)
-    )
+    pairs, bursts = choices.pairs, choices.bursts
+    swapped = sum(choice.action is PairAction.SWAP for choice in pairs)
+    if pairs:
+        runtime.output.info(
+            _(
+                "Your decisions — pairs swapped: {swapped}, pairs left alone: "
+                "{skipped}."
+            ).format(swapped=swapped, skipped=len(pairs) - swapped)
+        )
+    if bursts:
+        runtime.output.info(
+            _(
+                "Your decisions — burst series reviewed: {series}, shots set aside: "
+                "{shots}."
+            ).format(series=len(bursts), shots=sum(len(c.discarded) for c in bursts))
+        )
     return apply_choices(plan, choices, keep_policy(runtime.settings, runtime.mapper))
 
 

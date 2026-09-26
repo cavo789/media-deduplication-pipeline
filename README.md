@@ -102,7 +102,7 @@ Folders sharing identical files
 | Broken files | Empty files (0 bytes) and files that cannot be opened (truncated JPEG or RAW file, damaged video). `clean` deletes the empty ones and moves the others to the quarantine, never deleting them outright. |
 | Orphan sidecars | [Sidecar files](#sidecar-files) (`.xmp`, `.aae`, `.thm`) with no file of the same name left next to them once `clean` has run. Moved to the quarantine. |
 | Near duplicates | The same photo saved again: resized (WhatsApp), recompressed, rotated, or without its EXIF date. Not identical files: `clean` leaves them alone unless you add `--tier near`, see [below](#near-duplicates-and-bursts). |
-| Burst series | Shots of one camera taken seconds apart. Listed with the sharpest one suggested, never cleaned. |
+| Burst series | Shots of one camera taken seconds apart. Listed with the sharpest one suggested; `clean` only moves the shots you [set aside with `review`](#sort-burst-series-with-the-keyboard). |
 | Duration | How long the whole audit took. |
 
 Each sentence of *Folders sharing identical files* is a pair of folders holding the same files:
@@ -233,8 +233,9 @@ remembered in the cache.
   never count. The highest resolution is kept. The report shows each group side by side, with
   the resolution, size and sharpness of every copy.
 - **Burst series**: shots of one camera, a few seconds apart, of the same scene. This is
-  curation, not duplication: they are only listed, the sharpest shot suggested. Nothing in a
-  series is ever cleaned, and a burst shot is never taken for a near duplicate.
+  curation, not duplication: they are listed, the sharpest shot suggested. A plain `clean`
+  never touches them, and a burst shot is never taken for a near duplicate. You choose which
+  shots go, [with the keyboard](#sort-burst-series-with-the-keyboard).
 
 A plain `clean` never touches near duplicates. After checking them in the report, add
 `--tier near`: the copies are **moved to the quarantine** (they are not identical, so they
@@ -248,6 +249,41 @@ docker run --rm -it `
   -v "$HOME\media-dedup\quarantine:/quarantine" `
   cavo789/media-dedup clean --tier near
 ```
+
+### Sort burst series with the keyboard
+
+Thousands of burst shots are tedious to sort file by file. `review` audits, then serves a page in
+your browser that shows **one series at a time**, every shot large, the sharpest one marked ⭐:
+
+| Key | Action |
+|---|---|
+| `←` `→` (or space) | Previous or next series |
+| `1` … `9` | Set that shot aside, or keep it again (a click on the shot works too) |
+| `S` | Keep only the sharpest shot |
+| `A` | Keep every shot of the series |
+
+Each choice is **saved at once** in `decisions.json`, in the folder mounted on `/reports`: stop
+with Ctrl+C whenever you like, the next `review` resumes your choices. A shot of a protected
+folder is never set aside, and each series always keeps at least one shot.
+
+```powershell
+docker run --rm -it --name media-dedup-review -p 127.0.0.1::8080 `
+  -v "C:\Photos:/data/c/Photos:ro" `
+  -v "$HOME\media-dedup\reports:/reports" `
+  -v media-dedup-cache:/cache `
+  cavo789/media-dedup review
+```
+
+`-p 127.0.0.1::8080` lets Docker choose a free port, reachable from your computer only. Once
+the audit is done, run `docker port media-dedup-review 8080` in another terminal: it gives the
+address to open in your browser (for example `127.0.0.1:49153`).
+
+The page never touches a photo. Once done, add `--decisions decisions.json` to the
+[`clean` command](#going-further): the shots set aside are **moved to the quarantine** (they are
+not copies, nothing could rebuild them), `undo` puts them back and `purge` deletes them for
+good. The file is refused if a series changed since the review; give `review` and `clean` the
+same `--prefer`, `--protect` and `--exclude` options. The same file can hold the [folder-pair
+decisions](#going-further) of a report too: `review` keeps them.
 
 ### Sidecar files
 
@@ -320,6 +356,7 @@ their data live there too.
 | Duplicates | Really deleted (the space is freed immediately); `undo` rebuilds them from the kept copy, date included, even across disks. |
 | Unreadable files | Moved to the quarantine, never deleted outright; `purge` deletes them for good when you are sure. |
 | Near duplicates | Never touched by default. With `--tier near`, moved to the quarantine (never deleted) once checked: the kept photo still exists, the copy is the very file the audit saw. `undo` puts them back. |
+| Burst series | Never touched by default. The shots you [set aside with `review`](#sort-burst-series-with-the-keyboard) are moved to the quarantine (never deleted) by `clean --decisions`, once checked: a shot you kept is still there, the shot set aside is the very file the review showed. `undo` puts them back. |
 | Other file types | Only when asked for with `--ext`: [their copies](#other-file-types) are moved to the quarantine (never deleted), and software folders (`.git`, `node_modules`, `AppData`, …) are skipped. |
 | Sidecars | Never touched next to their photo. An orphan is moved to the quarantine (never deleted) once checked: unchanged since the audit, and no file of the same name next to it. `undo` puts it back. |
 | Every group | Always keeps at least one copy. |
@@ -331,8 +368,8 @@ their data live there too.
 | `/data/<drive>/<path>` | The folders to analyse (`C:\Photos` → `/data/c/Photos`). | always; `:ro` for `audit` |
 | `/config` | `config.toml` only — created, commented, on first run. | optional |
 | `/journal` | One JSONL journal per clean. | **required** by `clean`, `undo`, `history` |
-| `/quarantine` | Unreadable files, orphan sidecars, near duplicates and copies of other file types set aside by `clean`. | to handle them |
-| `/reports` | One folder per run (`report.html`, one page per folder pair, previews, `plan.csv`) and `index.html`. | optional |
+| `/quarantine` | Unreadable files, orphan sidecars, near duplicates, burst shots set aside and copies of other file types moved by `clean`. | to handle them |
+| `/reports` | One folder per run (`report.html`, one page per folder pair, previews, `plan.csv`), `index.html`, and the `decisions.json` of `review`. | optional; **required** by `review` |
 | `/cache` | SQLite index: later audits only read new or changed files. | optional, recommended |
 
 Missing or unwritable mounts are explained by 💡 tips. The image also runs with
@@ -343,6 +380,7 @@ Missing or unwritable mounts are explained by 💡 tips. The image also runs wit
 | Command | What it does |
 |---|---|
 | `audit` | Find exact duplicates and broken files. Never writes to `/data`. |
+| `review` | Audit, then [sort the burst series](#sort-burst-series-with-the-keyboard) in your browser, one at a time, with the keyboard. Never writes to `/data`. |
 | `clean` | Audit, confirm, then delete duplicate copies, delete empty files and quarantine unreadable ones and orphan sidecars. |
 | `undo [RUN]` | Restore every file of a clean run (the latest by default). |
 | `history` | List the clean runs: files deleted, space freed, quarantine, restores. |
@@ -358,13 +396,14 @@ Global options go **before** the command: `media-dedup --locale fr audit`.
 | `--locale en\|fr` | Interface language (English by default); numbers and sizes follow it: `67,947` and `44.3 GB`, or `67.947` and `44,3 Go`. |
 | `--verbosity error\|warning\|info\|debug` | How much to log. |
 | `--color auto\|always\|never` | ANSI colours (`NO_COLOR` is honoured). |
-| `--prefer PATH` | (`audit`, `clean`, `crosscheck`) Folder whose copies are kept first; repeatable, ordered. |
-| `--protect PATH` | (`audit`, `clean`, `crosscheck`) Folder never modified; its files are the copies kept. |
-| `--exclude PATH` | (`audit`, `clean`, `crosscheck`) Folder never analysed. |
+| `--prefer PATH` | (`audit`, `review`, `clean`, `crosscheck`) Folder whose copies are kept first; repeatable, ordered. |
+| `--protect PATH` | (`audit`, `review`, `clean`, `crosscheck`) Folder never modified; its files are the copies kept. |
+| `--exclude PATH` | (`audit`, `review`, `clean`, `crosscheck`) Folder never analysed. |
 | `--ext EXT` | (`audit`, `clean`, `crosscheck`) Only analyse these extensions (`--ext png,webp`); every photo, RAW and video one by default. [Other types](#other-file-types) too (`--ext pdf,docx`). |
 | `--yes`, `-y` | (`clean`, `purge`) Do not ask for confirmation. |
 | `--tier exact\|near` | (`clean`) `exact` (default): byte-for-byte copies only. `near`: also move [near duplicates](#near-duplicates-and-bursts) to the quarantine. |
-| `--decisions FILE` | (`clean`) Apply the folder-pair [decisions downloaded from a report](#going-further); a relative path is read from `/reports`. |
+| `--decisions FILE` | (`clean`) Apply the folder-pair [decisions downloaded from a report](#going-further) and the burst shots [set aside with `review`](#sort-burst-series-with-the-keyboard); a relative path is read from `/reports`. (`review`) The file the choices are saved in, `decisions.json` by default. |
+| `--port PORT` | (`review`) Port of the page inside the container, `8080` by default; publish it with `-p 127.0.0.1::8080`. |
 
 `media-dedup --help` and `media-dedup <command> --help` document everything, in both languages.
 

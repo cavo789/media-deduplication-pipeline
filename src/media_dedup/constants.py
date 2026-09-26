@@ -15,8 +15,7 @@ REPORT_FILE_NAME: Final = "report.html"
 REPORT_INDEX_FILE_NAME: Final = "index.html"
 SUMMARY_FILE_NAME: Final = "summary.json"
 PLAN_CSV_FILE_NAME: Final = "plan.csv"
-# Czkawka, the independent duplicate finder the audit suggests as a second opinion.
-CZKAWKA_IMAGE: Final = "jlesage/czkawka:v26.09.2"
+CZKAWKA_IMAGE: Final = "jlesage/czkawka:v26.09.2"  # the audit's second opinion
 CZKAWKA_FILE_NAME: Final = "czkawka.json"
 CZKAWKA_OUTPUT_DIR: Final = "/out"
 THUMBNAILS_DIR_NAME: Final = "thumbs"
@@ -92,6 +91,7 @@ class ActionKind(StrEnum):
     QUARANTINE_NEAR = "quarantine-near"
     QUARANTINE_DUPLICATE = "quarantine-duplicate"
     QUARANTINE_SIDECAR = "quarantine-sidecar"
+    QUARANTINE_BURST = "quarantine-burst"
 
 
 class CleanTier(StrEnum):

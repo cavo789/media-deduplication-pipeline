@@ -32,7 +32,8 @@ def test_the_audit_shows_near_duplicates_and_bursts(
     """Counted in the summary, explained in a tip, shown side by side in the report."""
     output = run(cli, "audit").output
     assert "Near duplicates (moved only with --tier near)" in output
-    assert "Burst series (listed, never cleaned)" in output
+    assert "Burst series (moved only if set aside with 'review')" in output
+    assert "media-dedup review" in output
     assert "clean --tier near" in output
     report = next(locations.reports_dir.glob("*-audit/report.html")).read_text()
     assert "IMG-20210705-WA0001.jpg" in report

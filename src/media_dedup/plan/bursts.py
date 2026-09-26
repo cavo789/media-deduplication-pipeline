@@ -1,7 +1,8 @@
 """Burst series: shots of one camera, seconds apart, of the same scene.
 
 A burst is curation, not duplication: two shots may be great and eight blurry. Series
-are only listed, the sharpest shot suggested; nothing in them is ever cleaned.
+are listed, the sharpest shot suggested; a plain `clean` never touches them. Only the
+shots set aside in `media-dedup review` are moved, by `clean --decisions`.
 
 Time comes first: shots are sorted by camera and moment, and each one is compared only
 with the shots taken up to `BURST_GAP_SECONDS` later, which keeps the comparisons few.

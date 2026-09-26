@@ -11,7 +11,9 @@ from media_dedup.cli.cmd_crosscheck import crosscheck_command
 from media_dedup.cli.cmd_history import history_command
 from media_dedup.cli.cmd_purge import purge_command
 from media_dedup.cli.cmd_reports import reports_command
+from media_dedup.cli.cmd_review import review_command
 from media_dedup.cli.cmd_undo import undo_command
+from media_dedup.cli.localized import LocalizedCommand, LocalizedGroup
 from media_dedup.cli.root import root_callback
 from media_dedup.constants import APP_NAME
 from media_dedup.i18n import _
@@ -54,11 +56,13 @@ def build_app() -> typer.Typer:
     """
     app = typer.Typer(
         name=APP_NAME,
+        cls=LocalizedGroup,
         help=_(
             "Find and safely clean duplicate photos and videos across folders and "
             "disks. Start with 'audit' (read-only), then 'clean'."
         ),
         epilog=_epilog(),
+        subcommand_metavar=_("COMMAND [ARGS]..."),
         rich_markup_mode="rich",
         no_args_is_help=True,
         add_completion=False,
@@ -83,6 +87,15 @@ def build_app() -> typer.Typer:
             _(
                 "Compare a fresh audit with Czkawka's results: a second, "
                 "independent opinion."
+            ),
+        ),
+        (
+            "review",
+            review_command,
+            act,
+            _(
+                "Set burst shots aside, one series at a time, with the keyboard in "
+                "your browser; 'clean --decisions' then moves them."
             ),
         ),
         (
@@ -129,5 +142,10 @@ def build_app() -> typer.Typer:
         ),
     )
     for name, function, panel, help_text in commands:
-        app.command(name=name, help=help_text, rich_help_panel=panel)(function)
+        app.command(
+            name=name,
+            cls=LocalizedCommand,
+            help=help_text,
+            rich_help_panel=panel,
+        )(function)
     return app

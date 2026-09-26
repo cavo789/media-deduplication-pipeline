@@ -56,7 +56,8 @@ def findings_table(findings: AuditFindings) -> Table:
         )
     if similar.bursts:
         table.add_row(
-            _("Burst series (listed, never cleaned)"), human_number(len(similar.bursts))
+            _("Burst series (moved only if set aside with 'review')"),
+            human_number(len(similar.bursts)),
         )
     if plan.protected_broken:
         table.add_row(

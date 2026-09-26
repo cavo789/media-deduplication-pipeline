@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from media_dedup.actions.verify import removal_blocker
+from media_dedup.actions.verify import burst_blocker, removal_blocker
+from media_dedup.constants import MediaKind
+from media_dedup.scan.models import MediaFile
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -38,3 +40,15 @@ def test_one_file_reached_through_two_paths_is_never_deleted(tmp_path: Path) -> 
     assert removal_blocker(keeper, alias, 4) == (
         "it is the kept copy itself, seen through another path"
     )
+
+
+def test_a_burst_shot_moves_only_while_a_kept_shot_is_left(tmp_path: Path) -> None:
+    """Every kept shot gone: the shot set aside stays; one left: it may move."""
+    kept, aside = tmp_path / "kept.jpg", tmp_path / "aside.jpg"
+    aside.write_bytes(b"shot")
+    stat = aside.stat()
+    candidate = MediaFile(aside, stat.st_size, stat.st_mtime_ns, MediaKind.IMAGE)
+    shot = MediaFile(kept, 4, 0, MediaKind.IMAGE)
+    assert burst_blocker((shot,), candidate) == "no shot kept from its series is left"
+    kept.write_bytes(b"best")
+    assert burst_blocker((shot,), candidate) is None

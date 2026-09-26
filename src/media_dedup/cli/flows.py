@@ -155,6 +155,13 @@ def confirm_clean(runtime: Runtime, plan: CleanPlan, yes: bool) -> bool:  # noqa
             plan.moved_copies,
         )
         runtime.output.info(moved.format(count=human_number(plan.moved_copies)))
+    if plan.burst_count:
+        bursts = ngettext(
+            "{count} burst shot you set aside will be moved to the quarantine.",
+            "{count} burst shots you set aside will be moved to the quarantine.",
+            plan.burst_count,
+        )
+        runtime.output.info(bursts.format(count=human_number(plan.burst_count)))
     if plan.orphans:
         orphans = ngettext(
             "{count} orphan sidecar (.xmp, .aae, .thm) will be moved to the "

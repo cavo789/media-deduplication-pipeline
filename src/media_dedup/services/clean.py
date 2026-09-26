@@ -36,22 +36,28 @@ class CleanService:
         self._runtime = runtime
         self._progress = progress
 
-    def ensure_ready(self, *, near: bool = False) -> None:
+    def ensure_ready(self, *, near: bool = False, bursts: bool = False) -> None:
         """Check, before any analysis, that cleaning is possible and reversible.
 
         Args:
             near: Near duplicates will be moved to the quarantine (`--tier near`).
+            bursts: Burst shots a review set aside will be moved there too.
 
         Raises:
             MountError: The journal is not persistent, a folder is read-only, the
-                journal or the quarantine is not writable, or near duplicates or copies
-                of other files have no quarantine to go to.
+                journal or the quarantine is not writable, or near duplicates, burst
+                shots or copies of other files have no quarantine to go to.
         """
         runtime = self._runtime
         quarantine = runtime.persistent(MountKind.QUARANTINE)
         if near and not quarantine:
             raise MountError(
                 _("--tier near moves near duplicates to /quarantine: mount it."),
+                _('Add -v "<a folder of yours>:/quarantine" to handle them.'),
+            )
+        if bursts and not quarantine:
+            raise MountError(
+                _("Burst shots you set aside go to /quarantine: mount it."),
                 _('Add -v "<a folder of yours>:/quarantine" to handle them.'),
             )
         if runtime.settings.scan.other_files and not quarantine:

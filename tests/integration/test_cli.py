@@ -6,10 +6,12 @@ import re
 from typing import TYPE_CHECKING
 
 import pytest
+from typer.main import get_command
 from typer.testing import CliRunner
 
 from media_dedup.__main__ import main
 from media_dedup.cli.app import build_app
+from media_dedup.cli.localized import LocalizedGroup
 from media_dedup.constants import Locale
 from media_dedup.i18n import install
 from tests.support.cli import run
@@ -27,6 +29,20 @@ def test_help_is_translated() -> None:
     assert 'docker run --rm -it -v "${PWD}:/data/current:ro" media-dedup audit' in (
         result.output
     )
+
+
+def test_french_help_has_no_english_left() -> None:
+    """Typer's own strings (usage line, `--help`, defaults) are translated too."""
+    install(Locale.FR)
+    app = build_app()
+    group = get_command(app)
+    assert isinstance(group, LocalizedGroup)
+    for args in (["--help"], *([name, "--help"] for name in sorted(group.commands))):
+        output = CliRunner().invoke(app, args).output
+        assert "Utilisation : media-dedup" in output, args
+        assert "Affiche ce message et quitte." in output, args
+        for english in ("Usage:", "Show this message", "[default:", "COMMAND "):
+            assert english not in output, (args, english)
 
 
 def test_version() -> None:

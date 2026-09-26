@@ -52,7 +52,8 @@ def clean_command(  # pylint: disable=too-many-arguments,too-many-locals
         ext: `--ext` extensions.
         yes: `--yes`, skip the confirmation.
         tier: `--tier`, near duplicates are moved to the quarantine too.
-        decisions: `--decisions`, the review downloaded from a report.
+        decisions: `--decisions`, the review downloaded from a report or written by
+            `review`.
 
     Raises:
         typer.Exit: The user declined.
@@ -64,8 +65,9 @@ def clean_command(  # pylint: disable=too-many-arguments,too-many-locals
             folder_layer(prefer, protect, exclude)
         ).with_overrides(scan_layer(ext))
         service = CleanService(runtime, progress)
-        service.ensure_ready(near=tier is CleanTier.NEAR)
         review = load_review(runtime, decisions) if decisions else None
+        bursts = review is not None and bool(review.bursts)
+        service.ensure_ready(near=tier is CleanTier.NEAR, bursts=bursts)
         findings = audit_and_show(runtime)
         plan = service.feasible(findings.plan)
         if tier is CleanTier.NEAR:
