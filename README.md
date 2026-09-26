@@ -37,6 +37,7 @@ What it does:
 - [Commands](#commands)
 - [Configuration](#configuration)
 - [Warnings](#warnings)
+- [Can you trust it?](#can-you-trust-it)
 - [Development](#development)
 
 ## What you see while it runs
@@ -75,6 +76,7 @@ An example on a large photo folder (folder names changed):
 Audit summary
 ┌────────────────────────────────────┬─────────────┐
 │ Media files scanned                │      67,947 │
+│ Groups of identical files          │      11,904 │
 │ Extra copies that can be deleted   │      12,633 │
 │ Space that can be freed            │     44.3 GB │
 │ Broken files (empty or unreadable) │         180 │
@@ -93,6 +95,7 @@ Folders sharing identical files
 | Line | What it means |
 |---|---|
 | Media files scanned | Every photo and video found. Other files (`.xmp`, documents, …) are ignored. |
+| Groups of identical files | How many distinct photos or videos exist in several identical copies. Other tools, such as Czkawka, count the same groups: a handy number to compare. |
 | Extra copies that can be deleted | The files `clean` would delete. For every photo or video present several times, one copy is kept and the others are extra: a photo stored in 3 folders gives 2 extra copies. |
 | Space that can be freed | The total size of those extra copies. |
 | Broken files | Empty files (0 bytes) and files that cannot be opened (truncated JPEG, damaged video). `clean` deletes the empty ones and moves the others to the quarantine, never deleting them outright. |
@@ -104,6 +107,10 @@ frees comes last. The pairs freeing the most space come first. When both are the
 same folder, the files are duplicated inside it (`IMG_0001.jpg` and `IMG_0001 (1).jpg`). The kept
 folder follows the [rules below](#how-it-keeps-your-photos-safe); not the one you want? Name it
 in `--prefer` (or `folders.preferred`) and audit again.
+
+When a folder loses **all** its photos and videos, each with a copy kept in the other folder,
+the sentence ends with *"… holds nothing else: it is entirely a copy of …"*. This is the most
+reassuring case: that folder is a plain copy.
 
 ## Going further
 
@@ -153,7 +160,15 @@ docker run --rm -it `
 ```
 
 In the report, start with the *folder pairs* table: which folder keeps its copies, which folder
-loses them.
+loses them. Each pair shows a few sample pictures and a badge when the folder is entirely a copy.
+Click its number of files to see every copy, line by line: the file kept and the identical file
+deleted.
+`plan.csv`, next to the report, lists **every** file of the plan in a spreadsheet (group,
+SHA-256, size, action, path, date), with no cap. It opens directly in Excel, accents included.
+The report also explains *how we know these are duplicates*, shows a random sample of photo
+groups, and gives every group its SHA-256 with a *Check it yourself* command: paste it in
+PowerShell (`Get-FileHash`) to see the same fingerprint for every copy, without trusting
+media-dedup.
 
 **Clean** — the same folders **without `:ro`**, plus a journal (what makes `undo` possible) and
 a quarantine (where unreadable files are set aside):
@@ -188,7 +203,7 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 ```
 
 **Update** — `docker pull cavo789/media-dedup` fetches the latest version; a tag such as
-`cavo789/media-dedup:0.1.0` pins one.
+`cavo789/media-dedup:0.1.1` pins one.
 
 ## How it keeps your photos safe
 
@@ -211,7 +226,7 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 | `/config` | `config.toml` only — created, commented, on first run. | optional |
 | `/journal` | One JSONL journal per clean. | **required** by `clean`, `undo`, `history` |
 | `/quarantine` | Unreadable files set aside by `clean`. | when broken files exist |
-| `/reports` | One folder per run (`report.html`, previews) and `index.html`. | optional |
+| `/reports` | One folder per run (`report.html`, one page per folder pair, previews, `plan.csv`) and `index.html`. | optional |
 | `/cache` | SQLite index: later audits only read new or changed files. | optional, recommended |
 
 Missing mounts are explained by 💡 tips. The image also runs with `--read-only --tmpfs /tmp`.
@@ -306,6 +321,89 @@ into a control character (the tool refuses such a path rather than ignoring it).
 - **Run with `-it`**: without a terminal, `clean` cannot ask for confirmation (use `--yes`) and
   colours are off.
 
+## Can you trust it?
+
+Before deleting family photos, everyone asks the same question: *are these really, really
+duplicates?* This chapter explains what the tool calls a duplicate, what it checks before
+deleting, how you can check it yourself, and what to watch out for.
+
+### What counts as a duplicate
+
+Only **byte-for-byte identical** files. The tool first compares sizes, then a SHA-256
+fingerprint of the first 64 KB, then a SHA-256 fingerprint of the whole content. In practice,
+two different files never share a SHA-256: the odds are far lower than those of a disk error.
+
+- **The name and the date do not matter.** `IMG_1234.jpg` and `Marie et Paul.jpg` with the same
+  bytes are duplicates. Two `IMG_0001.jpg` with different content are not.
+- **Looking the same is not enough.** A resized, recompressed, rotated or re-tagged copy is a
+  different file: the tool leaves it alone.
+- **Only photos and videos** are analysed, recognised by their extension. Other files are
+  ignored.
+
+### What the tool checks before deleting
+
+The details are in [How it keeps your photos safe](#how-it-keeps-your-photos-safe). In short:
+
+- **The audit never writes.** Mount your folders with `:ro` and Docker itself forbids any
+  write.
+- **One file seen twice is not a duplicate.** A folder mounted twice is refused, and a file
+  reachable through two paths (a hard link) is analysed once.
+- **Right before each deletion**, `clean` checks that the kept copy still exists, is another
+  file, and is still byte-for-byte identical. Otherwise it leaves the file alone.
+- **Every action is written to the journal**, and `undo` rebuilds the deleted copies from the
+  kept one.
+
+### Check it yourself
+
+The report (`-v "…:/reports"`) is built for that:
+
+- The **folder pairs** come first. A badge marks a folder that is *entirely a copy* of another
+  one, and each pair has a page listing every copy.
+- A **random sample** of photo groups comes with previews.
+- **Check it yourself**, on every group, gives a PowerShell `Get-FileHash` command. Paste it:
+  every copy shows the same SHA-256, computed by Windows, not by media-dedup.
+- **`plan.csv`** lists every file of the plan with its SHA-256, ready for Excel.
+
+### Get a second opinion with Czkawka
+
+[Czkawka](https://github.com/qarmin/czkawka) is an independent, open-source duplicate finder,
+written differently and with another hash function. The community image `jlesage/czkawka`
+(about 500 MB) ships its command-line tool. Run it with the **same `-v` options as your
+audit**. The options below give it the same scope as media-dedup: every file size (`-m 1`)
+and the same extensions (`-x`):
+
+```powershell
+docker run --rm -v "C:\Photos:/data/c/Photos:ro" jlesage/czkawka `
+  czkawka_cli dup -d /data -m 1 -W `
+  -x 3g2,3gp,arw,avi,avif,bmp,cr2,cr3,dng,flv,gif,heic,heif,jpe,jpeg,jpg,m2ts,m4v,mkv,mov,mp4,mpeg,mpg,mts,nef,orf,pef,png,raf,rw2,srw,tif,tiff,ts,webm,webp,wmv
+```
+
+Its summary line, *Found N duplicated files which in G groups*, should match media-dedup's
+*Extra copies that can be deleted* (N) and *Groups of identical files* (G). Known causes of a
+small difference:
+
+- folders you excluded in `config.toml`: add `-e /data/c/Photos/<folder>` to Czkawka;
+- an `--ext` filter on the audit;
+- broken files: media-dedup keeps unreadable files out of the groups.
+
+Two tools written independently rarely make the same mistake. When they agree, you can clean
+with confidence; when they do not, look at the differences before cleaning.
+
+### Recommendations
+
+- **Audit first, then read the folder pairs.** Open a few pairs, and check a few groups
+  yourself.
+- **Choose which copy stays.** The kept file keeps its name and folder; the name of a deleted
+  copy is lost. If `Mariage 2015\Marie et Paul.jpg` matters more than `DCIM\IMG_1234.jpg`, name
+  the album folder in `--prefer` (or `folders.preferred`, or protect it), then audit again.
+- **Back up your photos before the first clean**, for example on an external disk: the tool
+  keeps one copy of each photo, not two.
+- **Pause cloud synchronisation** (OneDrive, Google Drive, Dropbox, iCloud) while cleaning.
+  Otherwise deletions are copied to the cloud and to your other devices.
+- **Keep the journal folder**: `undo` needs it. Run `purge` only when you are sure.
+- Read the [Warnings](#warnings) too: a real backup must be excluded, and each folder must be
+  mounted only once.
+
 ## Development
 
 **Build the image from the sources** — only needed to change the tool. Anywhere this README
@@ -317,9 +415,13 @@ cd media-deduplication-pipeline
 docker build --tag media-dedup .
 ```
 
-Maintainers publish a new version with `push` (see below): it builds the image, then pushes
-`cavo789/media-dedup:latest` and `:<version>` (read from `pyproject.toml`) to Docker Hub.
-Log in once beforehand with `docker login --username cavo789`.
+Every push and pull request runs the quality gate and the end-to-end tests on GitHub Actions
+([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). To publish a new version, bump
+`version` in `pyproject.toml`, commit and push `main`, then run `release` (see below). It tags
+`vX.Y.Z` and pushes the tag. CI then builds the image for amd64 and arm64, runs the end-to-end
+tests, and pushes `cavo789/media-dedup:<version>` and `:latest` to Docker Hub, with an SBOM and
+a provenance attestation. This needs two repository secrets: `DOCKERHUB_USERNAME` and
+`DOCKERHUB_TOKEN` (a Docker Hub access token with read/write scope).
 
 Open the repository in the devcontainer (VS Code, *Reopen in Container*). Every new terminal
 shows the cheatsheet of helper commands (`welcome` redraws it):
@@ -330,7 +432,8 @@ shows the cheatsheet of helper commands (`welcome` redraws it):
 | `format`, `tests` | Auto-fix formatting; run targeted tests. |
 | `dedup …`, `demo` | Run the tool from the sources against `/tmp/media-dedup/`; `demo` builds a sample tree and audits it. |
 | `reports`, `reports_stop` | Serve the HTML reports on a free port chosen by the OS. |
-| `build`, `push`, `e2e`, `dive`, `dive_ci` | Build the image, publish it to Docker Hub (`cavo789/media-dedup`, `:latest` and `:<version>`), run the end-to-end tests, inspect or gate its layers. |
+| `build`, `e2e`, `dive`, `dive_ci` | Build the image, run the end-to-end tests, inspect or gate its layers. |
+| `release` | Tag `vX.Y.Z` (the `pyproject.toml` version) and push it: CI publishes the image. |
 | `i18n_extract`, `i18n_update` | Refresh the gettext catalogs after changing a user-facing string. |
 | `todos` | List the open backlog (`.todos/`, see `/todo` and `/todo-plan`). |
 

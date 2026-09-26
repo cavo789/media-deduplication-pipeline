@@ -2,20 +2,24 @@
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from media_dedup.constants import THUMBNAILS_DIR_NAME, MediaKind, Sizes
+from media_dedup.constants import PLAN_CSV_FILE_NAME, RunKind, Sizes
 from media_dedup.plan.pairs import folder_pairs
+from media_dedup.report.group_views import (
+    GroupRenderer,
+    largest_groups,
+    sample_groups,
+)
+from media_dedup.report.pair_views import PairRenderer, sampled_files
 from media_dedup.report.summary import ReportSummary
-from media_dedup.report.thumbnails import ThumbnailJob
+from media_dedup.report.thumbnails import PREVIEWABLE, ThumbnailJob, thumbnail_name
 from media_dedup.report.views import (
     BrokenSection,
     BrokenView,
-    FolderPairView,
-    GroupView,
+    GroupsSection,
     IncidentsSection,
     IncidentView,
     ReportView,
@@ -26,27 +30,9 @@ if TYPE_CHECKING:
 
     from media_dedup.actions.outcome import Incident
     from media_dedup.paths.host_paths import HostPathMapper
-    from media_dedup.plan.models import KeepDecision
-    from media_dedup.report.views import ReportRecord
-    from media_dedup.scan.models import BrokenFile, MediaFile
-
-_PREVIEWABLE = frozenset({MediaKind.IMAGE})
-_THUMBNAIL_NAME_LENGTH = 20
-
-
-def thumbnail_name(file: MediaFile) -> str:
-    """Return a stable, collision-free preview file name for `file`.
-
-    Args:
-        file: The media file.
-
-    Returns:
-        A relative path such as `thumbs/0f3a....jpg`.
-    """
-    digest = hashlib.sha256(str(file.path).encode()).hexdigest()[
-        :_THUMBNAIL_NAME_LENGTH
-    ]
-    return f"{THUMBNAILS_DIR_NAME}/{digest}.jpg"
+    from media_dedup.plan.pairs import FolderPair
+    from media_dedup.report.views import PairPageView, ReportRecord
+    from media_dedup.scan.models import BrokenFile
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,15 +49,22 @@ class ReportBuilder:
             record: What the report is written from.
 
         Returns:
-            One job per previewable keeper or broken image.
+            One job per previewable keeper, pair sample or broken image.
         """
         plan = record.findings.plan
-        shown = [d.keeper for d in plan.decisions[: Sizes.MAX_GROUPS_IN_REPORT]]
-        files = [*shown, *(item.file for item in plan.broken)]
+        groups = (*largest_groups(plan), *sample_groups(plan))
+        files = {
+            file.path: file
+            for file in (
+                *(decision.keeper for decision in groups),
+                *sampled_files(_pairs(record)),
+                *(item.file for item in plan.broken),
+            )
+        }
         return [
             ThumbnailJob(file.path, self.folder / thumbnail_name(file))
-            for file in files
-            if file.kind in _PREVIEWABLE
+            for file in files.values()
+            if file.kind in PREVIEWABLE
         ]
 
     def summary(self, record: ReportRecord) -> ReportSummary:
@@ -94,6 +87,7 @@ class ReportBuilder:
             broken_files=len(plan.broken),
             freed_bytes=record.outcome.bytes_done if record.outcome else 0,
             run_id=record.run_id,
+            plan_file=PLAN_CSV_FILE_NAME,
         )
 
     def view(self, record: ReportRecord, previews: set[Path]) -> ReportView:
@@ -108,19 +102,24 @@ class ReportBuilder:
         """
         plan = record.findings.plan
         outcome = record.outcome
+        names = self._names(previews)
+        groups = GroupRenderer(self.mapper, names)
         return ReportView(
             summary=self.summary(record),
             roots=self._roots(record.findings.roots),
-            pairs=self._pairs(plan.decisions),
-            groups=tuple(
-                self._group(decision, previews)
-                for decision in plan.decisions[: Sizes.MAX_GROUPS_IN_REPORT]
+            pairs=tuple(
+                self._renderer(record, previews).summary(index, pair)
+                for index, pair in enumerate(_pairs(record), start=1)
             ),
-            hidden_groups=max(0, len(plan.decisions) - Sizes.MAX_GROUPS_IN_REPORT),
+            groups=GroupsSection(
+                sample=tuple(groups.group(d) for d in sample_groups(plan)),
+                largest=tuple(groups.group(d) for d in largest_groups(plan)),
+                hidden=max(0, len(plan.decisions) - Sizes.MAX_GROUPS_IN_REPORT),
+            ),
             broken=BrokenSection(
-                handled=tuple(self._broken(item, previews) for item in plan.broken),
+                handled=tuple(self._broken(item, names) for item in plan.broken),
                 protected=tuple(
-                    self._broken(item, previews) for item in plan.protected_broken
+                    self._broken(item, names) for item in plan.protected_broken
                 ),
             ),
             incidents=IncidentsSection(
@@ -128,6 +127,35 @@ class ReportBuilder:
                 failed=self._incidents(outcome.failed if outcome else ()),
             ),
         )
+
+    def pair_pages(
+        self, record: ReportRecord, previews: set[Path]
+    ) -> tuple[tuple[str, PairPageView], ...]:
+        """Describe the page of every folder pair.
+
+        Args:
+            record: What the report is written from.
+            previews: Thumbnails actually written.
+
+        Returns:
+            Each page's relative path and view.
+        """
+        renderer = self._renderer(record, previews)
+        return tuple(
+            (view.pair.page, view)
+            for view in (
+                renderer.page(index, pair)
+                for index, pair in enumerate(_pairs(record), start=1)
+            )
+        )
+
+    def _renderer(self, record: ReportRecord, previews: set[Path]) -> PairRenderer:
+        return PairRenderer(
+            self.mapper, self._names(previews), record.kind is RunKind.CLEAN
+        )
+
+    def _names(self, previews: set[Path]) -> frozenset[str]:
+        return frozenset(str(path.relative_to(self.folder)) for path in previews)
 
     def _roots(self, roots: tuple[Path, ...]) -> tuple[str, ...]:
         # /data mounted as a whole: show its drive folders (C:\, D:\) rather than "/".
@@ -138,35 +166,13 @@ class ReportBuilder:
             )
         return tuple(self.mapper.to_host(root) for root in roots)
 
-    def _preview(self, file: MediaFile, previews: set[Path]) -> str | None:
-        name = thumbnail_name(file)
-        return name if self.folder / name in previews else None
-
-    def _group(self, decision: KeepDecision, previews: set[Path]) -> GroupView:
-        host = self.mapper.to_host
-        return GroupView(
-            size=decision.size,
-            keeper=host(decision.keeper.path),
-            removable=tuple(host(file.path) for file in decision.removable),
-            protected=tuple(host(file.path) for file in decision.protected),
-            thumbnail=self._preview(decision.keeper, previews),
-        )
-
-    def _broken(self, item: BrokenFile, previews: set[Path]) -> BrokenView:
+    def _broken(self, item: BrokenFile, names: frozenset[str]) -> BrokenView:
+        name = thumbnail_name(item.file)
         return BrokenView(
             path=self.mapper.to_host(item.file.path),
             reason=item.reason,
             detail=item.detail,
-            thumbnail=self._preview(item.file, previews),
-        )
-
-    def _pairs(self, decisions: Iterable[KeepDecision]) -> tuple[FolderPairView, ...]:
-        host = self.mapper.to_host
-        return tuple(
-            FolderPairView(
-                host(pair.kept_in), host(pair.removed_from), pair.files, pair.size
-            )
-            for pair in folder_pairs(decisions)
+            thumbnail=name if name in names else None,
         )
 
     def _incidents(self, incidents: Iterable[Incident]) -> tuple[IncidentView, ...]:
@@ -174,3 +180,16 @@ class ReportBuilder:
             IncidentView(self.mapper.to_host(Path(item.path)), item.reason)
             for item in incidents
         )
+
+
+def _pairs(record: ReportRecord) -> tuple[FolderPair, ...]:
+    """The folder pairs of a report, the same order everywhere.
+
+    Args:
+        record: What the report is written from.
+
+    Returns:
+        The pairs.
+    """
+    findings = record.findings
+    return folder_pairs(findings.plan.decisions, findings.folder_files)

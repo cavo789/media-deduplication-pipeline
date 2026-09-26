@@ -7,6 +7,18 @@
   "unreadable-video": _("Video cannot be opened"),
 } %}
 {% block title %}{{ _("media-dedup report") }} — {{ s.folder }}{% endblock %}
+{% macro group_block(group) %}
+<div class="group">
+  <div class="thumb">{% if group.thumbnail %}<img src="{{ group.thumbnail }}" alt="" loading="lazy">{% else %}🎞️{% endif %}</div>
+  <ul class="files">
+    <li class="keep">✅ {{ group.keeper }} <span class="muted">· {{ group.size | size }} · {{ _("kept") }}</span></li>
+    {% for path in group.removable %}<li class="remove">🗑️ {{ path }}</li>{% endfor %}
+    {% for path in group.protected %}<li class="lock">🔒 {{ path }} <span class="muted">· {{ _("protected folder, kept") }}</span></li>{% endfor %}
+    <li class="muted">SHA-256 <code>{{ group.digest[:16] }}…</code>
+      <details><summary>{{ _("Check it yourself") }}</summary><code class="command">{{ group.command }}</code></details></li>
+  </ul>
+</div>
+{% endmacro %}
 {% block content %}
 <h1>🧹 {{ _("Clean report") if is_clean else _("Audit report") }}</h1>
 <p class="muted">{{ s.created_at.strftime("%Y-%m-%d %H:%M") }} UTC{% if s.run_id %} · {{ _("run") }} {{ s.run_id }}{% endif %}</p>
@@ -23,8 +35,24 @@
   <div class="card"><div class="value">{{ s.broken_files | number }}</div><div class="label">{{ _("broken files") }}</div></div>
 </div>
 
+{% if s.plan_file %}
+<p>📄 <a href="{{ s.plan_file }}">{{ _("The whole plan as a spreadsheet (CSV): every group, every file") }}</a></p>
+{% endif %}
+
 {% if not is_clean %}
 <p class="note">🔒 {{ _("An audit never modifies anything. Every copy listed below is byte-for-byte identical to the one kept; 'clean' compares them again right before deleting.") }}</p>
+{% endif %}
+
+{% if report.groups.largest %}
+<div class="note">
+  <strong>🔍 {{ _("How do we know these are duplicates?") }}</strong>
+  <ul>
+    <li>{{ _("Same size, then the same SHA-256 fingerprint of the whole content: in practice, two different files never share it.") }}</li>
+    <li>{{ _("Right before deleting, 'clean' compares the two files again, byte by byte, and skips any difference.") }}</li>
+    <li>{{ _("A file reachable through two paths (a folder mounted twice, a hard link) is recognised: it is never counted as its own copy.") }}</li>
+    <li>{{ _("Check any group yourself: 'Check it yourself' gives the command printing its SHA-256 with your system's own tool (PowerShell's Get-FileHash on Windows).") }}</li>
+  </ul>
+</div>
 {% endif %}
 
 {% if report.incidents.failed or report.incidents.skipped %}
@@ -38,28 +66,31 @@
 
 {% if report.pairs %}
 <h2>📁 {{ _("Folder pairs") }}</h2>
-<p class="muted">{{ _("The quickest check: which folder keeps its copies, which folder loses them.") }}</p>
+<p class="muted">{{ _("The quickest check: which folder keeps its copies, which folder loses them. Open a pair to see every copy.") }}</p>
 <table>
-  <tr><th>{{ _("Kept in") }}</th><th>{{ _("Deleted from") if is_clean else _("Will be deleted from") }}</th><th class="num">{{ _("Files") }}</th><th class="num">{{ _("Size") }}</th></tr>
+  <tr><th>{{ _("Samples") }}</th><th>{{ _("Kept in") }}</th><th>{{ _("Deleted from") if is_clean else _("Will be deleted from") }}</th><th class="num">{{ _("Files") }}</th><th class="num">{{ _("Size") }}</th></tr>
   {% for pair in report.pairs %}
-  <tr><td>{{ pair.kept_in }}</td><td>{{ pair.removed_from }}</td><td class="num">{{ pair.files | number }}</td><td class="num">{{ pair.size | size }}</td></tr>
+  <tr>
+    <td><div class="samples">{% for sample in pair.samples %}<img src="{{ sample }}" alt="" loading="lazy">{% endfor %}</div></td>
+    <td class="keep">{{ pair.kept_in }}</td>
+    <td class="remove">{{ pair.removed_from }}{% if pair.complete %}<br><span class="badge">{{ _("entirely a copy: holds nothing else") }}</span>{% endif %}</td>
+    <td class="num"><a href="{{ pair.page }}">{{ pair.files | number }}</a></td>
+    <td class="num">{{ pair.size | size }}</td>
+  </tr>
   {% endfor %}
 </table>
 {% endif %}
 
-{% if report.groups %}
+{% if report.groups.sample %}
+<h2>🎲 {{ _("Random sample") }}</h2>
+<p class="muted">{{ _("Photo groups picked across the whole plan, the same ones on every run. The list after it starts with the largest files, often videos without preview.") }}</p>
+{% for group in report.groups.sample %}{{ group_block(group) }}{% endfor %}
+{% endif %}
+
+{% if report.groups.largest %}
 <h2>🧬 {{ _("Duplicate groups") }}</h2>
-{% for group in report.groups %}
-<div class="group">
-  <div class="thumb">{% if group.thumbnail %}<img src="{{ group.thumbnail }}" alt="" loading="lazy">{% else %}🎞️{% endif %}</div>
-  <ul class="files">
-    <li class="keep">✅ {{ group.keeper }} <span class="muted">· {{ group.size | size }} · {{ _("kept") }}</span></li>
-    {% for path in group.removable %}<li class="remove">🗑️ {{ path }}</li>{% endfor %}
-    {% for path in group.protected %}<li class="lock">🔒 {{ path }} <span class="muted">· {{ _("protected folder, kept") }}</span></li>{% endfor %}
-  </ul>
-</div>
-{% endfor %}
-{% if report.hidden_groups %}<p class="muted">{{ _("… and %(count)s more groups (largest files are shown first).", count=report.hidden_groups | number) }}</p>{% endif %}
+{% for group in report.groups.largest %}{{ group_block(group) }}{% endfor %}
+{% if report.groups.hidden %}<p class="muted">{{ _("… and %(count)s more groups (largest files are shown first).", count=report.groups.hidden | number) }}</p>{% endif %}
 {% endif %}
 
 {% if report.broken.handled or report.broken.protected %}
@@ -77,7 +108,7 @@
 {% endfor %}
 {% endif %}
 
-{% if not report.groups and not report.broken.handled %}
+{% if not report.groups.largest and not report.broken.handled %}
 <p class="note">🎉 {{ _("Nothing to clean: no duplicate and no broken file.") }}</p>
 {% endif %}
 <p class="muted"><a href="../index.html">← {{ _("All reports") }}</a></p>

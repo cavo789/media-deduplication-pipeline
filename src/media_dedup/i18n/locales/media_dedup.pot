@@ -1,3 +1,9 @@
+#, python-format
+msgid "%(num)s copy"
+msgid_plural "%(num)s copies"
+msgstr[0] ""
+msgstr[1] ""
+
 msgid "'media-dedup undo <run>' restores the files of a run."
 msgstr ""
 
@@ -11,10 +17,18 @@ msgstr ""
 msgid "A commented configuration file was created: {path}."
 msgstr ""
 
+msgid ""
+"A file reachable through two paths (a folder mounted twice, a hard link) "
+"is recognised: it is never counted as its own copy."
+msgstr ""
+
 msgid "ANSI colours: \"auto\", \"always\" or \"never\"."
 msgstr ""
 
 msgid "Act"
+msgstr ""
+
+msgid "Action"
 msgstr ""
 
 msgid "Add -v \"<a folder of yours>:/journal\" to the docker run command."
@@ -59,6 +73,9 @@ msgstr ""
 msgid "B"
 msgstr ""
 
+msgid "Back to the report"
+msgstr ""
+
 msgid "Broken"
 msgstr ""
 
@@ -80,6 +97,15 @@ msgstr ""
 
 #, python-brace-format
 msgid "Changed your mind? 'media-dedup undo {run_id}' restores everything."
+msgstr ""
+
+msgid ""
+"Check any group yourself: 'Check it yourself' gives the command printing "
+"its SHA-256 with your system's own tool (PowerShell's Get-FileHash on "
+"Windows)."
+msgstr ""
+
+msgid "Check it yourself"
 msgstr ""
 
 msgid "Checking that files can be read"
@@ -132,6 +158,9 @@ msgstr ""
 msgid "Deleted from"
 msgstr ""
 
+msgid "Detail"
+msgstr ""
+
 msgid "Do not ask for confirmation (overrides clean.confirm)."
 msgstr ""
 
@@ -153,6 +182,9 @@ msgid ""
 " files go to the quarantine."
 msgstr ""
 
+msgid "Each line: the file kept, and the byte-for-byte identical file deleted."
+msgstr ""
+
 #, python-brace-format
 msgid "Edit {path} to change these settings; command-line options win."
 msgstr ""
@@ -171,6 +203,9 @@ msgstr ""
 msgid ""
 "Every audit and clean, newest first. Open this page with a double-click: "
 "no server needed."
+msgstr ""
+
+msgid "Every copy"
 msgstr ""
 
 msgid "Example:"
@@ -219,6 +254,9 @@ msgstr ""
 msgid "Folder on your computer"
 msgstr ""
 
+msgid "Folder pair"
+msgstr ""
+
 msgid "Folder pairs"
 msgstr ""
 
@@ -243,6 +281,12 @@ msgstr ""
 msgid "GB"
 msgstr ""
 
+msgid "Group"
+msgstr ""
+
+msgid "Groups of identical files"
+msgstr ""
+
 #, python-brace-format
 msgid "HTML report: {path}"
 msgstr ""
@@ -250,6 +294,9 @@ msgstr ""
 msgid ""
 "Host paths, written between 'single quotes' so backslashes need no "
 "escaping. These are lists of paths: your real folders are never renamed."
+msgstr ""
+
+msgid "How do we know these are duplicates?"
 msgstr ""
 
 msgid "How much to log."
@@ -274,6 +321,9 @@ msgstr ""
 msgid "KB"
 msgstr ""
 
+msgid "Kept"
+msgstr ""
+
 msgid "Kept in"
 msgstr ""
 
@@ -294,6 +344,9 @@ msgid "MB"
 msgstr ""
 
 msgid "Media files scanned"
+msgstr ""
+
+msgid "Modified (UTC)"
 msgstr ""
 
 msgid "Mount"
@@ -405,6 +458,12 @@ msgid "Permanently delete the quarantined broken files of a run."
 msgstr ""
 
 msgid ""
+"Photo groups picked across the whole plan, the same ones on every run. "
+"The list after it starts with the largest files, often videos without "
+"preview."
+msgstr ""
+
+msgid ""
 "Precedence, from the strongest: command-line options > MEDIA_DEDUP_* "
 "environment variables (e.g. MEDIA_DEDUP_GENERAL__LOCALE=fr) > this file >"
 " built-in defaults."
@@ -418,6 +477,9 @@ msgid "Quarantine purged: {size} freed."
 msgstr ""
 
 msgid "Quarantined"
+msgstr ""
+
+msgid "Random sample"
 msgstr ""
 
 msgid ""
@@ -446,6 +508,11 @@ msgid "Restored"
 msgstr ""
 
 msgid "Restoring"
+msgstr ""
+
+msgid ""
+"Right before deleting, 'clean' compares the two files again, byte by "
+"byte, and skips any difference."
 msgstr ""
 
 msgid "Run"
@@ -479,6 +546,17 @@ msgstr ""
 msgid "Run {run_id} has no quarantine."
 msgstr ""
 
+msgid "SHA-256"
+msgstr ""
+
+msgid ""
+"Same size, then the same SHA-256 fingerprint of the whole content: in "
+"practice, two different files never share it."
+msgstr ""
+
+msgid "Samples"
+msgstr ""
+
 msgid "Scan (override scan.* of config.toml)"
 msgstr ""
 
@@ -492,6 +570,9 @@ msgid "Show the version and exit."
 msgstr ""
 
 msgid "Size"
+msgstr ""
+
+msgid "Size (bytes)"
 msgstr ""
 
 msgid "Skipped (left untouched)"
@@ -521,13 +602,16 @@ msgstr ""
 
 msgid ""
 "The quickest check: which folder keeps its copies, which folder loses "
-"them."
+"them. Open a pair to see every copy."
 msgstr ""
 
 #, python-brace-format
 msgid ""
 "The same folder is mounted twice: {folders}. Each of its files would look"
 " like a duplicate of itself."
+msgstr ""
+
+msgid "The whole plan as a spreadsheet (CSV): every group, every file"
 msgstr ""
 
 #, python-brace-format
@@ -563,6 +647,9 @@ msgid ""
 msgstr ""
 
 msgid "When to use colours (NO_COLOR is honoured too)."
+msgstr ""
+
+msgid "Will be deleted"
 msgstr ""
 
 msgid "Will be deleted from"
@@ -614,6 +701,9 @@ msgstr ""
 msgid "default"
 msgstr ""
 
+msgid "delete"
+msgstr ""
+
 #, python-format
 msgid "duplicate copies in %(groups)s groups"
 msgstr ""
@@ -623,6 +713,9 @@ msgid "elapsed {time}"
 msgstr ""
 
 msgid "en"
+msgstr ""
+
+msgid "entirely a copy: holds nothing else"
 msgstr ""
 
 msgid "environment"
@@ -641,6 +734,9 @@ msgstr ""
 msgid "its copy {path} is gone"
 msgstr ""
 
+msgid "keep"
+msgstr ""
+
 msgid "kept"
 msgstr ""
 
@@ -656,7 +752,13 @@ msgstr ""
 msgid "media-dedup reports"
 msgstr ""
 
+msgid "move to the quarantine"
+msgstr ""
+
 msgid "protected folder, kept"
+msgstr ""
+
+msgid "protected, kept"
 msgstr ""
 
 msgid "run"
@@ -729,6 +831,10 @@ msgstr ""
 
 #, python-brace-format
 msgid "{name} must be a JSON array, e.g. [\"C:\\\\Photos\"]"
+msgstr ""
+
+#, python-brace-format
+msgid "{removed} holds nothing else: it is entirely a copy of {kept}."
 msgstr ""
 
 #, python-format

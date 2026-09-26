@@ -14,7 +14,9 @@ JOURNAL_SUFFIX: Final = ".jsonl"
 REPORT_FILE_NAME: Final = "report.html"
 REPORT_INDEX_FILE_NAME: Final = "index.html"
 SUMMARY_FILE_NAME: Final = "summary.json"
+PLAN_CSV_FILE_NAME: Final = "plan.csv"
 THUMBNAILS_DIR_NAME: Final = "thumbs"
+PAIRS_DIR_NAME: Final = "pairs"
 MOUNTINFO_PATH: Final = "/proc/self/mountinfo"
 FFPROBE_BINARY: Final = "ffprobe"
 
@@ -104,6 +106,9 @@ class Sizes(IntEnum):
     THUMBNAIL_EDGE = 160
     JPEG_DRAFT_DIVISOR = 8
     MAX_GROUPS_IN_REPORT = 500
+    PAIR_SAMPLES = 4
+    MAX_SAMPLED_PAIRS = 50
+    RANDOM_SAMPLE = 30
     IO_CONCURRENCY = 16
 
 

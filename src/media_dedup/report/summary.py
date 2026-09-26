@@ -24,3 +24,4 @@ class ReportSummary(BaseModel):
     broken_files: int
     freed_bytes: int = 0
     run_id: str | None = None
+    plan_file: str | None = None

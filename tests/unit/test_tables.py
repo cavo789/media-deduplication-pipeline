@@ -7,7 +7,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-from media_dedup.console.tables import folder_pairs_view
+from media_dedup.console.tables import findings_table, folder_pairs_view
 from media_dedup.constants import MediaKind
 from media_dedup.paths.host_paths import HostPathMapper
 from media_dedup.plan.models import AuditFindings, CleanPlan, KeepDecision
@@ -76,3 +76,31 @@ def test_pairs_freeing_the_most_space_come_first() -> None:
     )
     output = rendered(*small, big)
     assert output.index("C:\\C") < output.index("C:\\A")
+
+
+def test_a_complete_copy_is_said_so() -> None:
+    """A folder whose every file has a kept copy is announced as entirely a copy."""
+    decision = KeepDecision(
+        "d", 1, media("/data/c/A/x.jpg"), (media("/data/c/B/x.jpg"),)
+    )
+    findings = AuditFindings(
+        0, (), CleanPlan((decision,), ()), folder_files={Path("/data/c/B"): 1}
+    )
+    table = folder_pairs_view(findings, MAPPER)
+    assert table is not None
+    buffer = io.StringIO()
+    Console(file=buffer, width=300).print(table)
+    assert "C:\\B holds nothing else: it is entirely a copy of C:\\A." in (
+        buffer.getvalue()
+    )
+
+
+def test_the_summary_counts_the_groups() -> None:
+    """The group count makes comparisons with other tools possible."""
+    decision = KeepDecision(
+        "d", 1, media("/data/c/A/x.jpg"), (media("/data/c/B/x.jpg"),)
+    )
+    buffer = io.StringIO()
+    table = findings_table(AuditFindings(2, (), CleanPlan((decision,), ())))
+    Console(file=buffer, width=120).print(table)
+    assert "Groups of identical files" in buffer.getvalue()

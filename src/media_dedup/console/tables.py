@@ -35,6 +35,7 @@ def findings_table(findings: AuditFindings) -> Table:
     table.add_column(style="bold")
     table.add_column(justify="right")
     table.add_row(_("Media files scanned"), human_number(findings.files_scanned))
+    table.add_row(_("Groups of identical files"), human_number(len(plan.decisions)))
     table.add_row(
         _("Extra copies that can be deleted"), human_number(plan.removable_count)
     )
@@ -64,7 +65,7 @@ def folder_pairs_view(findings: AuditFindings, mapper: HostPathMapper) -> Table 
     Returns:
         The top pairs, or None when there is no duplicate.
     """
-    pairs = folder_pairs(findings.plan.decisions)[:_TOP_PAIRS]
+    pairs = folder_pairs(findings.plan.decisions, findings.folder_files)[:_TOP_PAIRS]
     if not pairs:
         return None
     table = Table.grid(padding=(0, 1))
@@ -110,6 +111,10 @@ def _pair_sentence(pair: FolderPair, mapper: HostPathMapper) -> Text:
             "{count} files are both in {kept} (kept) and in {removed} (deleted),"
             " {size} freed.",
             pair.files,
+        )
+    if pair.complete:
+        sentence += " " + _(
+            "{removed} holds nothing else: it is entirely a copy of {kept}."
         )
     return Text.from_markup(sentence.format(**values))
 

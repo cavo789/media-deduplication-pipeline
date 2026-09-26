@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import shutil
 import time
+from collections import Counter
+from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from media_dedup.constants import FFPROBE_BINARY
@@ -91,6 +93,7 @@ class AuditService:
             roots=roots,
             plan=build_plan(groups, broken, policy),
             seconds=time.monotonic() - started,
+            folder_files=MappingProxyType(Counter(file.path.parent for file in files)),
         )
 
     def _list_files(self, roots: tuple[Path, ...]) -> list[MediaFile]:

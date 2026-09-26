@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from PIL import Image, ImageFile, ImageOps
 
-from media_dedup.constants import Sizes
+from media_dedup.constants import THUMBNAILS_DIR_NAME, MediaKind, Sizes
 from media_dedup.scan.image_check import prepare_image_worker
 
 if TYPE_CHECKING:
@@ -16,7 +17,11 @@ if TYPE_CHECKING:
     from concurrent.futures import Executor
     from pathlib import Path
 
+    from media_dedup.scan.models import MediaFile
+
+PREVIEWABLE: Final = frozenset({MediaKind.IMAGE})
 _JPEG_QUALITY = 80
+_THUMBNAIL_NAME_LENGTH = 20
 _THUMBNAIL_ERRORS = (
     OSError,
     ValueError,
@@ -24,6 +29,21 @@ _THUMBNAIL_ERRORS = (
     EOFError,
     Image.DecompressionBombError,
 )
+
+
+def thumbnail_name(file: MediaFile) -> str:
+    """Return a stable, collision-free preview file name for `file`.
+
+    Args:
+        file: The media file.
+
+    Returns:
+        A relative path such as `thumbs/0f3a....jpg`.
+    """
+    digest = hashlib.sha256(str(file.path).encode()).hexdigest()[
+        :_THUMBNAIL_NAME_LENGTH
+    ]
+    return f"{THUMBNAILS_DIR_NAME}/{digest}.jpg"
 
 
 @dataclass(frozen=True, slots=True)

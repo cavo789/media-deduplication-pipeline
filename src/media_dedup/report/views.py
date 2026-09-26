@@ -30,6 +30,28 @@ class FolderPairView:
     removed_from: str
     files: int
     size: int
+    complete: bool = False
+    samples: tuple[str, ...] = ()
+    page: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class CopyView:
+    """One copy of a folder pair: the file kept, the identical file deleted."""
+
+    kept: str
+    removed: str
+    size: int
+    digest: str
+
+
+@dataclass(frozen=True, slots=True)
+class PairPageView:
+    """The page listing every copy of one folder pair."""
+
+    pair: FolderPairView
+    copies: tuple[CopyView, ...]
+    is_clean: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +63,8 @@ class GroupView:
     removable: tuple[str, ...]
     protected: tuple[str, ...]
     thumbnail: str | None
+    digest: str = ""
+    command: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,13 +102,21 @@ class IncidentsSection:
 
 
 @dataclass(frozen=True, slots=True)
+class GroupsSection:
+    """Duplicate groups: a sample of photos, the largest groups, how many are hidden."""
+
+    sample: tuple[GroupView, ...]
+    largest: tuple[GroupView, ...]
+    hidden: int
+
+
+@dataclass(frozen=True, slots=True)
 class ReportView:
     """The full report."""
 
     summary: ReportSummary
     roots: tuple[str, ...]
     pairs: tuple[FolderPairView, ...]
-    groups: tuple[GroupView, ...]
-    hidden_groups: int
+    groups: GroupsSection
     broken: BrokenSection
     incidents: IncidentsSection

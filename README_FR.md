@@ -39,6 +39,7 @@ Ce qu'elle fait :
 - [Commandes](#commandes)
 - [Configuration](#configuration)
 - [Mises en garde](#mises-en-garde)
+- [Peut-on lui faire confiance ?](#peut-on-lui-faire-confiance-)
 - [Développement](#développement)
 
 ## Ce qui s'affiche pendant l'analyse
@@ -78,6 +79,7 @@ Voici un exemple sur un gros dossier de photos (noms de dossiers modifiés) :
 Résumé de l'audit
 ┌───────────────────────────────────────┬─────────────┐
 │ Fichiers média analysés               │      67.947 │
+│ Groupes de fichiers identiques        │      11.904 │
 │ Copies en trop, supprimables          │      12.633 │
 │ Espace libérable                      │     44,3 Go │
 │ Fichiers cassés (vides ou illisibles) │         180 │
@@ -96,6 +98,7 @@ Dossiers partageant des fichiers identiques
 | Ligne | Ce qu'elle veut dire |
 |---|---|
 | Fichiers média analysés | Toutes les photos et vidéos trouvées. Les autres fichiers (`.xmp`, documents, …) sont ignorés. |
+| Groupes de fichiers identiques | Combien de photos ou vidéos distinctes existent en plusieurs copies identiques. D'autres outils, comme Czkawka, comptent les mêmes groupes : un chiffre pratique pour comparer. |
 | Copies en trop, supprimables | Les fichiers que `clean` supprimerait. Pour chaque photo ou vidéo présente plusieurs fois, un exemplaire est gardé et les autres sont en trop : une photo rangée dans 3 dossiers donne 2 copies en trop. |
 | Espace libérable | La taille totale de ces copies en trop. |
 | Fichiers cassés | Les fichiers vides (0 octet) et ceux qui ne s'ouvrent pas (JPEG tronqué, vidéo abîmée). `clean` supprime les vides et déplace les autres en quarantaine, sans jamais les supprimer directement. |
@@ -108,6 +111,10 @@ viennent en premier. Quand les deux sont le même dossier, les fichiers y sont e
 `IMG_0001 (1).jpg`). Le dossier gardé suit les [règles ci-dessous](#comment-vos-photos-restent-en-sécurité) ;
 ce n'est pas celui que vous voulez ? Indiquez-le dans `--prefer` (ou `folders.preferred`) et
 relancez l'audit.
+
+Quand un dossier perd **toutes** ses photos et vidéos, et qu'une copie de chacune est gardée
+dans l'autre dossier, la phrase se termine par *« … ne contient rien d'autre : c'est
+entièrement une copie de … »*. C'est le cas le plus rassurant : ce dossier est une simple copie.
 
 ## Aller plus loin
 
@@ -157,7 +164,16 @@ docker run --rm -it `
 ```
 
 Dans le rapport, commencez par le tableau des *paires de dossiers* : il montre quel dossier garde
-ses copies et quel dossier les perd.
+ses copies et quel dossier les perd. Chaque paire montre quelques photos d'exemple, et un badge
+quand le dossier est entièrement une copie. Cliquez sur son nombre de fichiers pour voir chaque
+copie, ligne par ligne : le fichier gardé et le fichier identique supprimé.
+`plan.csv`, à côté du rapport, liste **chaque** fichier du plan dans un tableur (groupe,
+SHA-256, taille, action, chemin, date), sans limite. Il s'ouvre directement dans Excel, accents
+compris (séparateur `;` en français).
+Le rapport explique aussi *comment on sait que ce sont des doublons*, montre un échantillon
+aléatoire de groupes de photos, et donne pour chaque groupe son SHA-256 avec une commande
+*Vérifiez vous-même* : collez-la dans PowerShell (`Get-FileHash`) pour voir la même empreinte
+pour chaque copie, sans devoir croire media-dedup sur parole.
 
 **Nettoyer** : les mêmes dossiers **sans `:ro`**, plus un journal (c'est lui qui rend `undo`
 possible) et une quarantaine (où sont mis de côté les fichiers illisibles) :
@@ -194,7 +210,7 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 ```
 
 **Mettre à jour** : `docker pull cavo789/media-dedup` récupère la dernière version ; un tag comme
-`cavo789/media-dedup:0.1.0` en fixe une.
+`cavo789/media-dedup:0.1.1` en fixe une.
 
 ## Comment vos photos restent en sécurité
 
@@ -217,7 +233,7 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 | `/config` | `config.toml` uniquement, créé et commenté au premier lancement. | facultatif |
 | `/journal` | Un journal JSONL par nettoyage. | **obligatoire** pour `clean`, `undo`, `history` |
 | `/quarantine` | Fichiers illisibles mis de côté par `clean`. | s'il y a des fichiers cassés |
-| `/reports` | Un dossier par exécution (`report.html`, vignettes) et `index.html`. | facultatif |
+| `/reports` | Un dossier par exécution (`report.html`, une page par paire de dossiers, vignettes, `plan.csv`) et `index.html`. | facultatif |
 | `/cache` | Index SQLite : les audits suivants ne relisent que les fichiers nouveaux ou modifiés. | facultatif, recommandé |
 
 Chaque montage manquant est expliqué par une astuce 💡. L'image fonctionne aussi avec
@@ -322,6 +338,96 @@ confirm = true
 - **Lancez avec `-it`** : sans terminal, `clean` ne peut pas demander confirmation (utilisez
   `--yes`) et les couleurs sont désactivées.
 
+## Peut-on lui faire confiance ?
+
+Avant de supprimer des photos de famille, tout le monde se pose la même question : *est-ce
+vraiment, vraiment des doublons ?* Ce chapitre explique ce que l'outil appelle un doublon, ce
+qu'il vérifie avant de supprimer, comment le vérifier vous-même, et à quoi faire attention.
+
+### Qu'est-ce qu'un doublon ?
+
+Uniquement des fichiers **identiques octet par octet**. L'outil compare d'abord les tailles,
+puis une empreinte SHA-256 des 64 premiers Ko, puis une empreinte SHA-256 de tout le contenu.
+En pratique, deux fichiers différents n'ont jamais le même SHA-256 : c'est bien moins probable
+qu'une erreur de disque.
+
+- **Le nom et la date ne comptent pas.** `IMG_1234.jpg` et `Marie et Paul.jpg` avec les mêmes
+  octets sont des doublons. Deux `IMG_0001.jpg` au contenu différent n'en sont pas.
+- **Se ressembler ne suffit pas.** Une copie redimensionnée, recompressée, pivotée ou dont les
+  métadonnées ont changé est un autre fichier : l'outil n'y touche pas.
+- **Seules les photos et vidéos** sont analysées, reconnues par leur extension. Les autres
+  fichiers sont ignorés.
+
+### Ce que l'outil vérifie avant de supprimer
+
+Le détail est dans [Comment vos photos restent en sécurité](#comment-vos-photos-restent-en-sécurité).
+En bref :
+
+- **L'audit n'écrit jamais.** Montez vos dossiers avec `:ro` et Docker lui-même interdit toute
+  écriture.
+- **Un fichier vu deux fois n'est pas un doublon.** Un dossier monté deux fois est refusé, et
+  un fichier accessible par deux chemins (lien physique) n'est analysé qu'une fois.
+- **Juste avant chaque suppression**, `clean` vérifie que la copie gardée existe toujours,
+  qu'il s'agit bien d'un autre fichier, et qu'elle est toujours identique octet par octet.
+  Sinon, il laisse le fichier en place.
+- **Chaque action est écrite dans le journal**, et `undo` reconstruit les copies supprimées à
+  partir de celle gardée.
+
+### Vérifiez vous-même
+
+Le rapport (`-v "…:/reports"`) est fait pour ça :
+
+- Les **paires de dossiers** viennent en premier. Un badge signale un dossier qui est
+  *entièrement une copie* d'un autre, et chaque paire a sa page qui liste toutes ses copies.
+- Un **échantillon aléatoire** de groupes de photos est affiché avec des aperçus.
+- **Vérifiez vous-même**, sur chaque groupe, donne une commande PowerShell `Get-FileHash`.
+  Collez-la : chaque copie affiche le même SHA-256, calculé par Windows et non par
+  media-dedup.
+- **`plan.csv`** liste chaque fichier du plan avec son SHA-256, prêt pour Excel.
+
+### Demander un second avis à Czkawka
+
+[Czkawka](https://github.com/qarmin/czkawka) est un détecteur de doublons indépendant et open
+source, écrit différemment et avec une autre fonction de hachage. L'image communautaire
+`jlesage/czkawka` (environ 500 Mo) contient son outil en ligne de commande. Lancez-le avec les
+**mêmes options `-v` que votre audit**. Les options ci-dessous lui donnent le même périmètre
+que media-dedup : toutes les tailles de fichier (`-m 1`) et les mêmes extensions (`-x`) :
+
+```powershell
+docker run --rm -v "C:\Photos:/data/c/Photos:ro" jlesage/czkawka `
+  czkawka_cli dup -d /data -m 1 -W `
+  -x 3g2,3gp,arw,avi,avif,bmp,cr2,cr3,dng,flv,gif,heic,heif,jpe,jpeg,jpg,m2ts,m4v,mkv,mov,mp4,mpeg,mpg,mts,nef,orf,pef,png,raf,rw2,srw,tif,tiff,ts,webm,webp,wmv
+```
+
+Sa ligne de synthèse, *Found N duplicated files which in G groups*, doit correspondre aux
+*Copies en trop, supprimables* (N) et aux *Groupes de fichiers identiques* (G) de media-dedup.
+Causes connues d'un petit écart :
+
+- des dossiers exclus dans `config.toml` : ajoutez `-e /data/c/Photos/<dossier>` à Czkawka ;
+- un filtre `--ext` sur l'audit ;
+- les fichiers cassés : media-dedup écarte les fichiers illisibles des groupes.
+
+Deux outils écrits indépendamment font rarement la même erreur. S'ils sont d'accord, vous
+pouvez nettoyer en confiance ; sinon, regardez les différences avant de nettoyer.
+
+### Recommandations
+
+- **Commencez par un audit, puis lisez les paires de dossiers.** Ouvrez quelques paires et
+  vérifiez vous-même quelques groupes.
+- **Choisissez quelle copie reste.** Le fichier gardé conserve son nom et son dossier ; le nom
+  d'une copie supprimée est perdu. Si `Mariage 2015\Marie et Paul.jpg` compte plus que
+  `DCIM\IMG_1234.jpg`, indiquez le dossier de l'album dans `--prefer` (ou `folders.preferred`,
+  ou protégez-le), puis relancez l'audit.
+- **Sauvegardez vos photos avant le premier nettoyage**, par exemple sur un disque externe :
+  l'outil garde un exemplaire de chaque photo, pas deux.
+- **Mettez en pause la synchronisation cloud** (OneDrive, Google Drive, Dropbox, iCloud)
+  pendant le nettoyage. Sinon, les suppressions sont recopiées dans le cloud et sur vos autres
+  appareils.
+- **Gardez le dossier du journal** : `undo` en a besoin. Ne lancez `purge` que si vous êtes
+  sûr.
+- Lisez aussi les [Mises en garde](#mises-en-garde) : une vraie sauvegarde doit être exclue,
+  et chaque dossier ne doit être monté qu'une fois.
+
 ## Développement
 
 **Construire l'image depuis les sources** : utile seulement pour modifier l'outil. Partout où
@@ -333,9 +439,14 @@ cd media-deduplication-pipeline
 docker build --tag media-dedup .
 ```
 
-Pour publier une nouvelle version, le mainteneur lance `push` (voir ci-dessous) : l'image est
-construite puis `cavo789/media-dedup:latest` et `:<version>` (lue dans `pyproject.toml`) sont
-poussées sur Docker Hub. Se connecter une fois au préalable avec `docker login --username cavo789`.
+Chaque push et chaque pull request lancent la barrière qualité et les tests de bout en bout
+sur GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). Pour publier une
+nouvelle version, augmentez `version` dans `pyproject.toml`, commitez et poussez `main`, puis
+lancez `release` (voir ci-dessous). Il crée le tag `vX.Y.Z` et le pousse. La CI construit alors
+l'image pour amd64 et arm64, lance les tests de bout en bout, puis pousse
+`cavo789/media-dedup:<version>` et `:latest` sur Docker Hub, avec un SBOM et une attestation de
+provenance. Il faut pour cela deux secrets dans le dépôt : `DOCKERHUB_USERNAME` et
+`DOCKERHUB_TOKEN` (un jeton d'accès Docker Hub en lecture/écriture).
 
 Ouvrez le dépôt dans le devcontainer (VS Code, *Reopen in Container*). Chaque nouveau
 terminal affiche la liste des commandes d'aide (`welcome` la réaffiche) :
@@ -346,7 +457,8 @@ terminal affiche la liste des commandes d'aide (`welcome` la réaffiche) :
 | `format`, `tests` | Corrige la mise en forme ; lance des tests ciblés. |
 | `dedup …`, `demo` | Lance l'outil depuis les sources sur `/tmp/media-dedup/` ; `demo` crée une arborescence d'exemple et l'audite. |
 | `reports`, `reports_stop` | Sert les rapports HTML sur un port libre choisi par le système. |
-| `build`, `push`, `e2e`, `dive`, `dive_ci` | Construit l'image, la publie sur Docker Hub (`cavo789/media-dedup`, `:latest` et `:<version>`), lance les tests de bout en bout, inspecte ou contrôle ses couches. |
+| `build`, `e2e`, `dive`, `dive_ci` | Construit l'image, lance les tests de bout en bout, inspecte ou contrôle ses couches. |
+| `release` | Crée le tag `vX.Y.Z` (la version de `pyproject.toml`) et le pousse : la CI publie l'image. |
 | `i18n_extract`, `i18n_update` | Met à jour les catalogues gettext après la modification d'un texte affiché. |
 | `todos` | Liste les TODOs ouverts (`.todos/`, voir `/todo` et `/todo-plan`). |
 

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
     from media_dedup.scan.models import BrokenFile, MediaFile
@@ -84,3 +86,6 @@ class AuditFindings:
     roots: tuple[Path, ...]
     plan: CleanPlan
     seconds: float = 0.0
+    folder_files: Mapping[Path, int] = field(
+        default_factory=lambda: MappingProxyType({})
+    )

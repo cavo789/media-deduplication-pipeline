@@ -14,6 +14,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
+#, python-format
+msgid "%(num)s copy"
+msgid_plural "%(num)s copies"
+msgstr[0] "%(num)s copie"
+msgstr[1] "%(num)s copies"
+
 msgid "'media-dedup undo <run>' restores the files of a run."
 msgstr "'media-dedup undo <run>' restaure les fichiers d'une exécution."
 
@@ -27,11 +33,21 @@ msgstr "Un dossier Windows (PowerShell) :"
 msgid "A commented configuration file was created: {path}."
 msgstr "Un fichier de configuration commenté a été créé : {path}."
 
+msgid ""
+"A file reachable through two paths (a folder mounted twice, a hard link) "
+"is recognised: it is never counted as its own copy."
+msgstr ""
+"Un fichier accessible par deux chemins (dossier monté deux fois, lien "
+"physique) est reconnu : il n'est jamais compté comme sa propre copie."
+
 msgid "ANSI colours: \"auto\", \"always\" or \"never\"."
 msgstr "Couleurs ANSI : \"auto\", \"always\" ou \"never\"."
 
 msgid "Act"
 msgstr "Agir"
+
+msgid "Action"
+msgstr "Action"
 
 msgid "Add -v \"<a folder of yours>:/journal\" to the docker run command."
 msgstr "Ajoutez -v \"<un de vos dossiers>:/journal\" à la commande docker run."
@@ -84,6 +100,9 @@ msgstr ""
 msgid "B"
 msgstr "o"
 
+msgid "Back to the report"
+msgstr "Retour au rapport"
+
 msgid "Broken"
 msgstr "Cassés"
 
@@ -106,6 +125,18 @@ msgstr "Impossible de demander confirmation sans terminal interactif."
 #, python-brace-format
 msgid "Changed your mind? 'media-dedup undo {run_id}' restores everything."
 msgstr "Vous changez d'avis ? 'media-dedup undo {run_id}' restaure tout."
+
+msgid ""
+"Check any group yourself: 'Check it yourself' gives the command printing "
+"its SHA-256 with your system's own tool (PowerShell's Get-FileHash on "
+"Windows)."
+msgstr ""
+"Vérifiez n'importe quel groupe vous-même : « Vérifiez vous-même » donne "
+"la commande qui affiche son SHA-256 avec l'outil de votre système (Get-"
+"FileHash de PowerShell sous Windows)."
+
+msgid "Check it yourself"
+msgstr "Vérifiez vous-même"
 
 msgid "Checking that files can be read"
 msgstr "Vérification de la lisibilité des fichiers"
@@ -163,6 +194,9 @@ msgstr "Supprimés"
 msgid "Deleted from"
 msgstr "Supprimées de"
 
+msgid "Detail"
+msgstr "Détail"
+
 msgid "Do not ask for confirmation (overrides clean.confirm)."
 msgstr "Ne pas demander de confirmation (remplace clean.confirm)."
 
@@ -185,6 +219,11 @@ msgid ""
 msgstr ""
 "Chaque copie est recomparée à celle gardée avant d'être supprimée ; les "
 "fichiers illisibles vont en quarantaine."
+
+msgid "Each line: the file kept, and the byte-for-byte identical file deleted."
+msgstr ""
+"Chaque ligne : le fichier gardé, et le fichier identique octet par octet "
+"qui est supprimé."
 
 #, python-brace-format
 msgid "Edit {path} to change these settings; command-line options win."
@@ -211,6 +250,9 @@ msgid ""
 msgstr ""
 "Chaque audit et nettoyage, du plus récent au plus ancien. Ouvrez cette "
 "page d'un double-clic : aucun serveur nécessaire."
+
+msgid "Every copy"
+msgstr "Toutes les copies"
 
 msgid "Example:"
 msgstr "Exemple :"
@@ -267,6 +309,9 @@ msgstr ""
 msgid "Folder on your computer"
 msgstr "Dossier sur votre ordinateur"
 
+msgid "Folder pair"
+msgstr "Paire de dossiers"
+
 msgid "Folder pairs"
 msgstr "Paires de dossiers"
 
@@ -293,6 +338,12 @@ msgstr "Commandes complètes (rapports, journal, WSL) : voir README_FR.md."
 msgid "GB"
 msgstr "Go"
 
+msgid "Group"
+msgstr "Groupe"
+
+msgid "Groups of identical files"
+msgstr "Groupes de fichiers identiques"
+
 #, python-brace-format
 msgid "HTML report: {path}"
 msgstr "Rapport HTML : {path}"
@@ -304,6 +355,9 @@ msgstr ""
 "Chemins de votre ordinateur, écrits entre 'apostrophes' pour que les "
 "barres obliques inverses n'aient pas besoin d'être doublées. Ce sont des "
 "listes de chemins : vos vrais dossiers ne sont jamais renommés."
+
+msgid "How do we know these are duplicates?"
+msgstr "Comment sait-on que ce sont des doublons ?"
 
 msgid "How much to log."
 msgstr "Niveau de détail des journaux."
@@ -327,6 +381,9 @@ msgstr "Configuration invalide ({details})."
 msgid "KB"
 msgstr "Ko"
 
+msgid "Kept"
+msgstr "Gardé"
+
 msgid "Kept in"
 msgstr "Conservées dans"
 
@@ -348,6 +405,9 @@ msgstr "Mo"
 
 msgid "Media files scanned"
 msgstr "Fichiers média analysés"
+
+msgid "Modified (UTC)"
+msgstr "Modifié (UTC)"
 
 msgid "Mount"
 msgstr "Montage"
@@ -482,6 +542,15 @@ msgstr ""
 "exécution."
 
 msgid ""
+"Photo groups picked across the whole plan, the same ones on every run. "
+"The list after it starts with the largest files, often videos without "
+"preview."
+msgstr ""
+"Des groupes de photos choisis dans tout le plan, les mêmes à chaque "
+"exécution. La liste suivante commence par les plus gros fichiers, souvent"
+" des vidéos sans aperçu."
+
+msgid ""
 "Precedence, from the strongest: command-line options > MEDIA_DEDUP_* "
 "environment variables (e.g. MEDIA_DEDUP_GENERAL__LOCALE=fr) > this file >"
 " built-in defaults."
@@ -499,6 +568,9 @@ msgstr "Quarantaine vidée : {size} libérés."
 
 msgid "Quarantined"
 msgstr "En quarantaine"
+
+msgid "Random sample"
+msgstr "Échantillon aléatoire"
 
 msgid ""
 "Reads the remaining candidates in full: same SHA-256 means identical, "
@@ -534,6 +606,13 @@ msgstr "Restaurés"
 msgid "Restoring"
 msgstr "Restauration"
 
+msgid ""
+"Right before deleting, 'clean' compares the two files again, byte by "
+"byte, and skips any difference."
+msgstr ""
+"Juste avant de supprimer, 'clean' compare à nouveau les deux fichiers, "
+"octet par octet, et ignore toute différence."
+
 msgid "Run"
 msgstr "Exécution"
 
@@ -567,6 +646,19 @@ msgstr "Exécution dont la quarantaine est supprimée ; toutes par défaut."
 msgid "Run {run_id} has no quarantine."
 msgstr "L'exécution {run_id} n'a pas de quarantaine."
 
+msgid "SHA-256"
+msgstr "SHA-256"
+
+msgid ""
+"Same size, then the same SHA-256 fingerprint of the whole content: in "
+"practice, two different files never share it."
+msgstr ""
+"Même taille, puis même empreinte SHA-256 de tout le contenu : en "
+"pratique, deux fichiers différents ne la partagent jamais."
+
+msgid "Samples"
+msgstr "Exemples"
+
 msgid "Scan (override scan.* of config.toml)"
 msgstr "Analyse (remplace scan.* de config.toml)"
 
@@ -581,6 +673,9 @@ msgstr "Affiche la version et quitte."
 
 msgid "Size"
 msgstr "Taille"
+
+msgid "Size (bytes)"
+msgstr "Taille (octets)"
 
 msgid "Skipped (left untouched)"
 msgstr "Ignorés (laissés intacts)"
@@ -609,10 +704,10 @@ msgstr "La quarantaine est vide."
 
 msgid ""
 "The quickest check: which folder keeps its copies, which folder loses "
-"them."
+"them. Open a pair to see every copy."
 msgstr ""
 "La vérification la plus rapide : quel dossier garde ses copies, quel "
-"dossier les perd."
+"dossier les perd. Ouvrez une paire pour voir chaque copie."
 
 #, python-brace-format
 msgid ""
@@ -621,6 +716,9 @@ msgid ""
 msgstr ""
 "Le même dossier est monté deux fois : {folders}. Chacun de ses fichiers "
 "passerait pour un doublon de lui-même."
+
+msgid "The whole plan as a spreadsheet (CSV): every group, every file"
+msgstr "Le plan complet en tableur (CSV) : chaque groupe, chaque fichier"
 
 #, python-brace-format
 msgid "These folders are mounted read-only: {folders}."
@@ -662,6 +760,9 @@ msgstr ""
 
 msgid "When to use colours (NO_COLOR is honoured too)."
 msgstr "Quand utiliser les couleurs (NO_COLOR est aussi respecté)."
+
+msgid "Will be deleted"
+msgstr "Sera supprimé"
 
 msgid "Will be deleted from"
 msgstr "Seront supprimées de"
@@ -714,6 +815,9 @@ msgstr "config.toml"
 msgid "default"
 msgstr "défaut"
 
+msgid "delete"
+msgstr "supprimer"
+
 #, python-format
 msgid "duplicate copies in %(groups)s groups"
 msgstr "copies en double dans %(groups)s groupes"
@@ -724,6 +828,9 @@ msgstr "écoulé {time}"
 
 msgid "en"
 msgstr "fr"
+
+msgid "entirely a copy: holds nothing else"
+msgstr "entièrement une copie : ne contient rien d'autre"
 
 msgid "environment"
 msgstr "environnement"
@@ -740,6 +847,9 @@ msgstr "c'est la copie gardée elle-même, vue par un autre chemin"
 #, python-brace-format
 msgid "its copy {path} is gone"
 msgstr "sa copie {path} a disparu"
+
+msgid "keep"
+msgstr "garder"
 
 msgid "kept"
 msgstr "conservée"
@@ -758,8 +868,14 @@ msgstr "Rapport media-dedup"
 msgid "media-dedup reports"
 msgstr "Rapports media-dedup"
 
+msgid "move to the quarantine"
+msgstr "déplacer en quarantaine"
+
 msgid "protected folder, kept"
 msgstr "dossier protégé, conservée"
+
+msgid "protected, kept"
+msgstr "protégé, gardé"
 
 msgid "run"
 msgstr "exécution"
@@ -846,6 +962,12 @@ msgstr "{folder} (vu comme {first} et comme {second})"
 #, python-brace-format
 msgid "{name} must be a JSON array, e.g. [\"C:\\\\Photos\"]"
 msgstr "{name} doit être un tableau JSON, p. ex. [\"C:\\\\Photos\"]"
+
+#, python-brace-format
+msgid "{removed} holds nothing else: it is entirely a copy of {kept}."
+msgstr ""
+"{removed} ne contient rien d'autre : c'est entièrement une copie de "
+"{kept}."
 
 #, python-format
 msgid "… and %(count)s more groups (largest files are shown first)."
