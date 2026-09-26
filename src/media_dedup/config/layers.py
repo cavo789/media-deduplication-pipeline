@@ -6,7 +6,9 @@ import json
 import tomllib
 from typing import TYPE_CHECKING, Final, get_origin
 
-from media_dedup.config.settings import CleanSettings, FolderSettings, GeneralSettings
+from pydantic import BaseModel
+
+from media_dedup.config.settings import Settings
 from media_dedup.constants import ENV_PREFIX
 from media_dedup.errors import ConfigError
 from media_dedup.i18n import _
@@ -15,14 +17,13 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
-    from pydantic import BaseModel
-
 type Layer = dict[str, dict[str, object]]
 _ENV_SEPARATOR = "__"
+# Every `config.toml` table, so that each one is overridable from the environment.
 _SECTIONS: Final[dict[str, type[BaseModel]]] = {
-    "general": GeneralSettings,
-    "folders": FolderSettings,
-    "clean": CleanSettings,
+    name: field.annotation
+    for name, field in Settings.model_fields.items()
+    if isinstance(field.annotation, type) and issubclass(field.annotation, BaseModel)
 }
 
 

@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from media_dedup.constants import PAIRS_DIR_NAME, Sizes
+from media_dedup.report.reasons import keep_reason_label
 from media_dedup.report.thumbnails import PREVIEWABLE, thumbnail_name
-from media_dedup.report.views import CopyView, FolderPairView, PairPageView
+from media_dedup.report.views import (
+    CopyView,
+    FolderPairView,
+    PairEvidence,
+    PairPageView,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -85,13 +92,16 @@ class PairRenderer:
             removed_from=self.mapper.to_host(pair.removed_from),
             files=pair.files,
             size=pair.size,
-            complete=pair.complete,
-            samples=tuple(
-                name
-                for name in (thumbnail_name(file) for file in samples)
-                if name in self.previews
-            ),
             page=pair_page_name(index),
+            evidence=PairEvidence(
+                complete=pair.complete,
+                reasons=_reasons(pair),
+                samples=tuple(
+                    name
+                    for name in (thumbnail_name(file) for file in samples)
+                    if name in self.previews
+                ),
+            ),
         )
 
     def page(self, index: int, pair: FolderPair) -> PairPageView:
@@ -115,3 +125,16 @@ class PairRenderer:
             ),
             is_clean=self.is_clean,
         )
+
+
+def _reasons(pair: FolderPair) -> tuple[str, ...]:
+    """Why the pair's copies are kept, the most frequent reason first.
+
+    Args:
+        pair: The folder pair.
+
+    Returns:
+        The translated reasons.
+    """
+    counts = Counter(copy.reason for copy in pair.copies if copy.reason)
+    return tuple(keep_reason_label(reason) for reason, _count in counts.most_common())

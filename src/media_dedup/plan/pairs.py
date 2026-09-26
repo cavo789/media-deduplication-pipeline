@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
     from pathlib import Path
 
+    from media_dedup.constants import KeepReason
     from media_dedup.plan.models import KeepDecision
     from media_dedup.scan.models import MediaFile
 
@@ -22,6 +23,7 @@ class Copy:
     removed: MediaFile
     digest: str
     size: int
+    reason: KeepReason | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,7 +76,13 @@ def folder_pairs(
         for file in decision.removable:
             key = (decision.keeper.path.parent, file.path.parent)
             grouped[key].append(
-                Copy(decision.keeper, file, decision.digest, decision.size)
+                Copy(
+                    decision.keeper,
+                    file,
+                    decision.digest,
+                    decision.size,
+                    decision.reason,
+                )
             )
     counts = folder_files or {}
     pairs = (

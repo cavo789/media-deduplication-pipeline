@@ -113,3 +113,21 @@ def test_escaped_backspace_in_a_path_is_refused(locations: Locations) -> None:
     locations.config_file.write_text('[folders]\nprotected = ["D:\\backup"]\n')
     with pytest.raises(ConfigError, match="single quotes"):
         load_settings(locations)
+
+
+def test_keep_patterns_come_from_the_file_and_the_environment(
+    locations: Locations,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """[keep] and [scan] are overridable; a broken pattern is refused with its key."""
+    locations.config_file.write_text("[keep]\ngenerated_names = ['CAM\\d+']\n")
+    monkeypatch.setenv("MEDIA_DEDUP_KEEP__GENERIC_FOLDERS", "[]")
+    monkeypatch.setenv("MEDIA_DEDUP_SCAN__EXTENSIONS", '["png"]')
+    settings = load_settings(locations).settings
+    assert settings.scan.extensions == (".png",)
+    keep = settings.keep
+    assert keep.generated_names == ("CAM\\d+",)
+    assert not keep.generic_folders
+    locations.config_file.write_text("[keep]\ngenerated_names = ['IMG_(']\n")
+    with pytest.raises(ConfigError, match=r"keep\.generated_names"):
+        load_settings(locations)

@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Final
 
 from media_dedup.constants import BrokenReason, Locale
 from media_dedup.i18n import _, active_locale
+from media_dedup.report.reasons import keep_reason_label
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -87,7 +88,9 @@ class _Rows:
         """
         for number, decision in enumerate(plan.decisions, start=1):
             group, digest = str(number), decision.digest
-            yield self._row(decision.keeper, _Line(_("keep"), group, digest))
+            reason = keep_reason_label(decision.reason)
+            keep = _Line(_("keep"), group, digest, reason)
+            yield self._row(decision.keeper, keep)
             for file in decision.removable:
                 yield self._row(file, _Line(_("delete"), group, digest))
             for file in decision.protected:

@@ -13,8 +13,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final
 
 from media_dedup.constants import Sizes
+from media_dedup.report.reasons import keep_reason_label
 from media_dedup.report.thumbnails import PREVIEWABLE, thumbnail_name
-from media_dedup.report.views import GroupView
+from media_dedup.report.views import GroupView, ProofView
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -96,6 +97,8 @@ class GroupRenderer:
             removable=removable,
             protected=protected,
             thumbnail=name if name in self.previews else None,
-            digest=decision.digest,
-            command=check_command((keeper, *removable, *protected)),
+            proof=ProofView(
+                decision.digest, check_command((keeper, *removable, *protected))
+            ),
+            reason=keep_reason_label(decision.reason),
         )

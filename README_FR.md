@@ -217,7 +217,7 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 | Étape | Garantie |
 |---|---|
 | `audit` | Lecture seule : montez vos dossiers avec `:ro` et Docker lui-même interdit toute écriture. |
-| Copie conservée | Choix déterministe : un dossier protégé, puis vos dossiers préférés (dans l'ordre), puis un nom qui ne ressemble pas à une copie (`IMG (1).jpg`, `IMG - Copie.jpg`, …), la date la plus ancienne, le chemin le plus court. |
+| Copie conservée | Choix déterministe : un dossier protégé, puis vos dossiers préférés (dans l'ordre), puis un nom qui ne ressemble pas à une copie (`IMG (1).jpg`, `IMG - Copie.jpg`, …), un nom choisi par quelqu'un plutôt que généré par un appareil photo ou une application (`Marie et Paul.jpg` plutôt que `IMG_1234.jpg`), un dossier nommé par quelqu'un plutôt qu'un dossier générique (`Vacances 2019` plutôt que `DCIM\100CANON`), la date la plus ancienne, le chemin le plus court. Le rapport indique, pour chaque groupe, la règle qui a décidé. |
 | Un fichier, deux chemins | Un dossier monté deux fois est refusé ; un fichier accessible par deux chemins (lien physique) n'est analysé qu'une fois, jamais comme doublon de lui-même. |
 | Avant chaque suppression | La copie conservée doit encore exister, être un autre fichier et être identique octet par octet ; sinon, le fichier est ignoré. |
 | Chaque action | Écrite dans le journal *avant* (`pending`) et *après* (`done`) : une interruption ne fait jamais perdre le fil. |
@@ -306,6 +306,10 @@ excluded = ['D:\backup']
 [scan]
 extensions = []       # p. ex. ["png", "webp"] ; vide : toutes les extensions prises en charge
 
+[keep]                 # en commentaire : listes intégrées ('media-dedup config' les affiche)
+# generated_names = ['IMG_\d+', 'DSC\d+']   # noms générés par les appareils et applications
+# generic_folders = ['DCIM', 'Camera']       # dossiers créés par les appareils et applications
+
 [clean]
 confirm = true
 ```
@@ -318,6 +322,11 @@ confirm = true
   seconde copie.
 - **`extensions`** : [seuls ces types de fichiers](#aller-plus-loin) sont
   analysés.
+- **`generated_names`**, **`generic_folders`** : expressions régulières portant sur un nom de
+  fichier entier (sans extension) ou un nom de dossier, sans tenir compte de la casse. Entre
+  copies identiques, un nom ou un dossier qui correspond vaut moins :
+  `Mariage 2015\Marie et Paul.jpg` est gardé plutôt que `DCIM\IMG_1234.jpg`. Une liste vide
+  `[]` désactive la règle.
 
 Écrivez les chemins Windows entre **apostrophes**. Entre guillemets, TOML transforme le `\b` de
 `"D:\backup"` en caractère de contrôle ; l'outil refuse alors ce chemin au lieu de l'ignorer.
@@ -414,10 +423,11 @@ pouvez nettoyer en confiance ; sinon, regardez les différences avant de nettoye
 
 - **Commencez par un audit, puis lisez les paires de dossiers.** Ouvrez quelques paires et
   vérifiez vous-même quelques groupes.
-- **Choisissez quelle copie reste.** Le fichier gardé conserve son nom et son dossier ; le nom
-  d'une copie supprimée est perdu. Si `Mariage 2015\Marie et Paul.jpg` compte plus que
-  `DCIM\IMG_1234.jpg`, indiquez le dossier de l'album dans `--prefer` (ou `folders.preferred`,
-  ou protégez-le), puis relancez l'audit.
+- **Vérifiez quelle copie reste.** Le fichier gardé conserve son nom et son dossier ; le nom
+  d'une copie supprimée est perdu. L'outil préfère déjà `Mariage 2015\Marie et Paul.jpg` à
+  `DCIM\IMG_1234.jpg`, et le rapport indique pourquoi chaque copie a été gardée. Ce n'est pas
+  celle que vous voulez ? Indiquez le dossier dans `--prefer` (ou `folders.preferred`, ou
+  protégez-le), puis relancez l'audit.
 - **Sauvegardez vos photos avant le premier nettoyage**, par exemple sur un disque externe :
   l'outil garde un exemplaire de chaque photo, pas deux.
 - **Mettez en pause la synchronisation cloud** (OneDrive, Google Drive, Dropbox, iCloud)

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from media_dedup.plan.keeper import KeepPolicy
+from media_dedup.plan.name_rules import NameRules
 from media_dedup.scan.filters import ScanFilters
 
 if TYPE_CHECKING:
@@ -12,19 +13,21 @@ if TYPE_CHECKING:
     from media_dedup.paths.host_paths import HostPathMapper
 
 
-def keep_policy(folders: FolderSettings, mapper: HostPathMapper) -> KeepPolicy:
-    """Build the keep policy from the preferred and protected host paths.
+def keep_policy(settings: Settings, mapper: HostPathMapper) -> KeepPolicy:
+    """Build the keep policy from the `[folders]` host paths and the `[keep]` names.
 
     Args:
-        folders: The `[folders]` settings.
+        settings: The effective settings.
         mapper: Host/container path translator.
 
     Returns:
         The policy, in container paths.
     """
+    folders, keep = settings.folders, settings.keep
     return KeepPolicy(
         preferred=tuple(mapper.to_container(path) for path in folders.preferred),
         protected=tuple(mapper.to_container(path) for path in folders.protected),
+        names=NameRules.from_patterns(keep.generated_names, keep.generic_folders),
     )
 
 

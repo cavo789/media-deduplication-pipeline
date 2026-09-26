@@ -11,11 +11,11 @@
 <div class="group">
   <div class="thumb">{% if group.thumbnail %}<img src="{{ group.thumbnail }}" alt="" loading="lazy">{% else %}🎞️{% endif %}</div>
   <ul class="files">
-    <li class="keep">✅ {{ group.keeper }} <span class="muted">· {{ group.size | size }} · {{ _("kept") }}</span></li>
+    <li class="keep">✅ {{ group.keeper }} <span class="muted">· {{ group.size | size }} · {{ _("kept") }}{% if group.reason %} · {{ _("why:") }} {{ group.reason }}{% endif %}</span></li>
     {% for path in group.removable %}<li class="remove">🗑️ {{ path }}</li>{% endfor %}
     {% for path in group.protected %}<li class="lock">🔒 {{ path }} <span class="muted">· {{ _("protected folder, kept") }}</span></li>{% endfor %}
-    <li class="muted">SHA-256 <code>{{ group.digest[:16] }}…</code>
-      <details><summary>{{ _("Check it yourself") }}</summary><code class="command">{{ group.command }}</code></details></li>
+    <li class="muted">SHA-256 <code>{{ group.proof.digest[:16] }}…</code>
+      <details><summary>{{ _("Check it yourself") }}</summary><code class="command">{{ group.proof.command }}</code></details></li>
   </ul>
 </div>
 {% endmacro %}
@@ -71,9 +71,9 @@
   <tr><th>{{ _("Samples") }}</th><th>{{ _("Kept in") }}</th><th>{{ _("Deleted from") if is_clean else _("Will be deleted from") }}</th><th class="num">{{ _("Files") }}</th><th class="num">{{ _("Size") }}</th></tr>
   {% for pair in report.pairs %}
   <tr>
-    <td><div class="samples">{% for sample in pair.samples %}<img src="{{ sample }}" alt="" loading="lazy">{% endfor %}</div></td>
-    <td class="keep">{{ pair.kept_in }}</td>
-    <td class="remove">{{ pair.removed_from }}{% if pair.complete %}<br><span class="badge">{{ _("entirely a copy: holds nothing else") }}</span>{% endif %}</td>
+    <td><div class="samples">{% for sample in pair.evidence.samples %}<img src="{{ sample }}" alt="" loading="lazy">{% endfor %}</div></td>
+    <td class="keep">{{ pair.kept_in }}{% if pair.evidence.reasons %}<br><span class="muted">{{ _("why:") }} {{ pair.evidence.reasons | join("; ") }}</span>{% endif %}</td>
+    <td class="remove">{{ pair.removed_from }}{% if pair.evidence.complete %}<br><span class="badge">{{ _("entirely a copy: holds nothing else") }}</span>{% endif %}</td>
     <td class="num"><a href="{{ pair.page }}">{{ pair.files | number }}</a></td>
     <td class="num">{{ pair.size | size }}</td>
   </tr>

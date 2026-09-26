@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
+    from media_dedup.constants import KeepReason
     from media_dedup.scan.models import BrokenFile, MediaFile
 
 
@@ -22,6 +23,7 @@ class KeepDecision:
     keeper: MediaFile
     removable: tuple[MediaFile, ...]
     protected: tuple[MediaFile, ...] = ()
+    reason: KeepReason | None = None
 
     @property
     def reclaimable(self) -> int:

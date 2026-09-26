@@ -2,9 +2,18 @@
 
 from __future__ import annotations
 
+import re
+
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from media_dedup.constants import MEDIA_EXTENSIONS, ColorMode, Locale, Verbosity
+from media_dedup.constants import (
+    GENERATED_NAMES,
+    GENERIC_FOLDERS,
+    MEDIA_EXTENSIONS,
+    ColorMode,
+    Locale,
+    Verbosity,
+)
 
 _FROZEN = ConfigDict(frozen=True, extra="forbid")
 _FIRST_PRINTABLE = 0x20
@@ -107,6 +116,41 @@ def supported_extensions() -> str:
     return ", ".join(sorted(ext.lstrip(".") for ext in MEDIA_EXTENSIONS))
 
 
+class KeepSettings(BaseModel):
+    r"""`[keep]` — names that say nothing, so that another copy's name is kept instead.
+
+    Regular expressions matching the whole name, case ignored: file names without
+    extension (`IMG_\d+`) and folder names (`DCIM`). An empty list disables the rule.
+    """
+
+    model_config = _FROZEN
+
+    generated_names: tuple[str, ...] = GENERATED_NAMES
+    generic_folders: tuple[str, ...] = GENERIC_FOLDERS
+
+    @field_validator("generated_names", "generic_folders")
+    @classmethod
+    def _valid_patterns(cls, patterns: tuple[str, ...]) -> tuple[str, ...]:
+        """Reject patterns that are not valid regular expressions.
+
+        Args:
+            patterns: Configured patterns.
+
+        Returns:
+            The patterns, unchanged.
+
+        Raises:
+            ValueError: A pattern does not compile.
+        """
+        for pattern in patterns:
+            try:
+                re.compile(pattern)
+            except re.error as exc:
+                message = f"{pattern!r} is not a valid regular expression: {exc}"
+                raise ValueError(message) from exc
+        return patterns
+
+
 class CleanSettings(BaseModel):
     """`[clean]` — behaviour of the `clean` command."""
 
@@ -123,4 +167,5 @@ class Settings(BaseModel):
     general: GeneralSettings = GeneralSettings()
     folders: FolderSettings = FolderSettings()
     scan: ScanSettings = ScanSettings()
+    keep: KeepSettings = KeepSettings()
     clean: CleanSettings = CleanSettings()

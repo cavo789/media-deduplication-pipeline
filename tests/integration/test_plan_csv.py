@@ -47,6 +47,8 @@ def test_every_file_of_the_plan_is_listed_once(locations: Locations) -> None:
     assert len(deleted) == plan.removable_count
     assert any(row[4].endswith("IMG_0001 (1).jpg") for row in deleted)
     assert any("Empty file (0 bytes)" in row[7] for row in body)
+    kept = [row for row in body if row[3] == "keep"]
+    assert all(row[7] for row in kept)  # every kept copy says why
     assert 'href="plan.csv"' in (folder / "report.html").read_text()
     index = (locations.reports_dir / "index.html").read_text()
     assert f'href="{folder.name}/plan.csv"' in index

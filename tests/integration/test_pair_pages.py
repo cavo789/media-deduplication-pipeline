@@ -34,6 +34,7 @@ def test_a_backup_folder_is_a_pair_with_its_own_page(
     assert 'href="pairs/pair-0001.html"' in html
     assert html.count('<img src="thumbs/') >= 3
     assert "How do we know these are duplicates?" in html
+    assert "why: the other name looks like a copy" in html
     assert "Random sample" in html
     assert "Get-FileHash &#39;C:\\Photos\\IMG_" in html
     digest = findings.plan.decisions[0].digest

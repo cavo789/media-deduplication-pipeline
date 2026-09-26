@@ -30,3 +30,18 @@ def looks_like_copy(path: Path) -> bool:
     """
     stem = path.stem.strip()
     return any(pattern.search(stem) for pattern in _COPY_PATTERNS)
+
+
+def without_copy_marks(stem: str) -> str:
+    """Remove the "copy" marks from a file name, to judge the name itself.
+
+    Args:
+        stem: A file name without its extension, e.g. `Copie de IMG_0001 (2)`.
+
+    Returns:
+        The name without its copy marks, e.g. `IMG_0001`.
+    """
+    name = stem.strip()
+    for pattern in _COPY_PATTERNS:
+        name = pattern.sub("", name).strip()
+    return name

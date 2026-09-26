@@ -87,7 +87,7 @@ class AuditService:
                     ExactDuplicateFinder(deps),
                 ),
             )
-        policy = keep_policy(runtime.settings.folders, runtime.mapper)
+        policy = keep_policy(runtime.settings, runtime.mapper)
         return AuditFindings(
             files_scanned=len(files),
             roots=roots,

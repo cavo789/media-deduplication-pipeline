@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -23,6 +23,19 @@ class ReportRecord:
 
 
 @dataclass(frozen=True, slots=True)
+class PairEvidence:
+    """What reassures about a folder pair.
+
+    Why its copies are kept, sample previews, and whether the folder losing its copies
+    is entirely a copy of the other one.
+    """
+
+    complete: bool = False
+    reasons: tuple[str, ...] = ()
+    samples: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class FolderPairView:
     """Two folders sharing identical files: the fastest way to sanity-check a clean."""
 
@@ -30,9 +43,8 @@ class FolderPairView:
     removed_from: str
     files: int
     size: int
-    complete: bool = False
-    samples: tuple[str, ...] = ()
     page: str = ""
+    evidence: PairEvidence = field(default_factory=PairEvidence)
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +67,14 @@ class PairPageView:
 
 
 @dataclass(frozen=True, slots=True)
+class ProofView:
+    """How to check a group yourself: its SHA-256 and the command recomputing it."""
+
+    digest: str = ""
+    command: str = ""
+
+
+@dataclass(frozen=True, slots=True)
 class GroupView:
     """One duplicate group."""
 
@@ -63,8 +83,8 @@ class GroupView:
     removable: tuple[str, ...]
     protected: tuple[str, ...]
     thumbnail: str | None
-    digest: str = ""
-    command: str = ""
+    proof: ProofView = field(default_factory=ProofView)
+    reason: str = ""
 
 
 @dataclass(frozen=True, slots=True)

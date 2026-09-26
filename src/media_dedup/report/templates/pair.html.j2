@@ -5,11 +5,11 @@
 <p class="muted"><a href="../report.html">← {{ _("Back to the report") }}</a></p>
 <h1>📁 {{ _("Folder pair") }}</h1>
 <ul class="files">
-  <li class="keep">✅ <span class="muted">{{ _("Kept in") }}</span> {{ pair.kept_in }}</li>
+  <li class="keep">✅ <span class="muted">{{ _("Kept in") }}</span> {{ pair.kept_in }}{% if pair.evidence.reasons %} <span class="muted">· {{ _("why:") }} {{ pair.evidence.reasons | join("; ") }}</span>{% endif %}</li>
   <li class="remove">🗑️ <span class="muted">{{ _("Deleted from") if page.is_clean else _("Will be deleted from") }}</span> {{ pair.removed_from }}</li>
 </ul>
-<p>{{ ngettext("%(num)s copy", "%(num)s copies", pair.files, num=pair.files | number) }} · {{ pair.size | size }}{% if pair.complete %} · <span class="badge">{{ _("entirely a copy: holds nothing else") }}</span>{% endif %}</p>
-{% if pair.samples %}<div class="samples">{% for sample in pair.samples %}<img src="../{{ sample }}" alt="" loading="lazy">{% endfor %}</div>{% endif %}
+<p>{{ ngettext("%(num)s copy", "%(num)s copies", pair.files, num=pair.files | number) }} · {{ pair.size | size }}{% if pair.evidence.complete %} · <span class="badge">{{ _("entirely a copy: holds nothing else") }}</span>{% endif %}</p>
+{% if pair.evidence.samples %}<div class="samples">{% for sample in pair.evidence.samples %}<img src="../{{ sample }}" alt="" loading="lazy">{% endfor %}</div>{% endif %}
 <h2>{{ _("Every copy") }}</h2>
 <p class="muted">{{ _("Each line: the file kept, and the byte-for-byte identical file deleted.") }}</p>
 <table>
