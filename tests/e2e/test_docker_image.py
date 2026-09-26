@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from typing import Final
 
 import pytest
 
 from tests.support.docker import IMAGE, run_image, tool
+from tests.support.media import FFMPEG
 
+# Empty JPEG, truncated JPEG, truncated MP4: the healthy videos must not be among them.
+DEMO_BROKEN: Final = re.compile(r"Broken files \(empty or unreadable\)\s*│\s*3 │")
 MANIFEST_SCRIPT: Final = (
     "import hashlib, json, pathlib; root = pathlib.Path('/data'); print(json.dumps({"
     "str(p.relative_to(root)): [hashlib.sha256(p.read_bytes()).hexdigest(), "
@@ -59,3 +63,12 @@ def test_audit_clean_undo_cycle(volumes: dict[str, str]) -> None:
     reports = tool(volumes, "reports")
     assert "-audit" in reports
     assert "-clean" in reports
+
+
+@pytest.mark.skipif(FFMPEG is None, reason="ffmpeg writes the demo videos")
+def test_image_ffprobe_tells_broken_videos(volumes: dict[str, str]) -> None:
+    """The image's own ffprobe (demuxers only) opens videos, not the truncated one."""
+    audit = tool(volumes, "audit", read_only_data=True)
+    assert audit.startswith("0\n"), audit
+    assert "ffprobe not found" not in audit
+    assert DEMO_BROKEN.search(audit), audit

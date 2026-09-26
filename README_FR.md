@@ -578,6 +578,12 @@ cd media-deduplication-pipeline
 docker build --tag media-dedup .
 ```
 
+L'image compile son propre `ffprobe`, environ 1 Mo au lieu de 141 Mo pour une version
+complète : l'outil demande seulement si le conteneur d'une vidéo s'ouvre, donc l'étape
+`ffprobe` du `Dockerfile` ne garde que les démultiplexeurs des extensions vidéo analysées. Une
+nouvelle extension vidéo demande aussi son démultiplexeur à cet endroit ; un test vérifie que
+les deux listes concordent.
+
 Chaque push et chaque pull request lancent la barrière qualité et les tests de bout en bout
 sur GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). Pour publier une
 nouvelle version, augmentez `version` dans `pyproject.toml`, commitez et poussez `main`, puis

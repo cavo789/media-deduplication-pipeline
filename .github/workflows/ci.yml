@@ -57,6 +57,9 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Install the locked environment
         run: uv sync --locked
+      # ffmpeg writes the demo videos: the image's own ffprobe must tell the truncated one.
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - name: End-to-end tests (real docker run)
         run: uv run pytest -m e2e
 
